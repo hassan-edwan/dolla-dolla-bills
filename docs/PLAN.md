@@ -1,6 +1,6 @@
 # dolla-dolla-bills — System Design Plan
 
-Status: draft v0.2 · Last updated: 2026-11-22
+Status: v0.3 (Phase 1 in progress) · Last updated: 2026-11-22
 
 A hierarchical system of models for trading a small, focused universe of volatile
 high-growth stocks. It can rotate into a defensive "safe-haven" sleeve when those
@@ -28,30 +28,48 @@ industries crash. Only long positions (buy and sell), with realistic execution d
 
 | Topic | Decision |
 |---|---|
-| Universe | Small focus set of volatile, high-growth industries, plus a defensive sleeve |
+| Universe | 2 fixed core industries (**tech, energy**) + **2 rotating slots** from a candidate pool, plus a safe-haven sleeve |
 | Instruments | Long-only stocks and ETFs. No shorting, options, or leverage |
+| Data | **Free sources only** (EDGAR, FRED, Yahoo). The LLM fills context gaps and hunts for failures to offset survivorship bias (§4.5) |
+| Objective | **Maximize 18-month growth**, measured on the distribution of rolling 18-month returns (§1.1) |
+| Risk limit | No preset drawdown limit. A "model broken" breaker only (§1.1) |
 | Capital | Paper first, then real money in stages, toward tens of thousands of USD |
 | Compute (build/train) | University HPC cluster |
 | Compute (live) | Cloud or on-prem, chosen from usage measured during paper trading (§9) |
+| Broker | **Alpaca** for the experiment (free paper trading + API). Robinhood is the user's current broker (§9.3) |
 | Repo | `hassan-edwan/dolla-dolla-bills` |
+
+### 1.1 Objective: "whatever increases gain on an 18-month basis"
+- Maximizing *expected* (average) 18-month gain pushes the optimizer toward putting
+  everything into the single most volatile stock. It looks great on average and
+  usually ends badly: a −50% loss needs +100% to recover.
+- What compounds fastest over 18 months is **expected log growth** (the Kelly
+  criterion). Log growth already punishes deep drawdowns, so no separate risk
+  preference is needed.
+- **Model selection** uses the *distribution* of rolling 18-month returns across
+  walk-forward windows: the median, the 5th/25th percentile, and the % of windows
+  that are positive. The single best backtest path is never used.
+- **"Model broken" breaker.** This is not a risk preference. If the live drawdown
+  exceeds the backtest's 99th-percentile drawdown, the model is behaving unlike
+  anything it was tested on. Trading halts for review (`configs/sim.yaml`).
 
 ---
 
 ## 2. Universe design
 
-### 2.1 Focus (trading) universe — about 15–30 names
-Pick **2–4 volatile, high-growth industries** with about 5–10 liquid names each.
-Candidates (to be decided):
+### 2.1 Focus (trading) universe
+- **Core (always on):** tech and energy, about 10 candidates each
+  (`configs/universe.yaml`). Energy covers oil & gas E&Ps plus power/solar names.
+- **Rotating (2 slots):** filled monthly from a pool: nuclear, quantum, space,
+  crypto-adjacent, EV/battery, gene/biotech, robotics/AI. A slot can be swapped at
+  most every 2 months, to avoid churn and wash sales. Phase 1–2 baselines use the
+  core only. In Phase 3 the rotation selector comes first as a simple
+  rule-based scorer (industry momentum + LLM trend score), and is replaced by the
+  central allocator once that beats it.
+- Every pool industry stays in the **training** universe even when it is not
+  selected for trading.
 
-- AI / semiconductors (compute, memory, networking)
-- Quantum computing
-- Space / launch / satellite
-- Nuclear / SMR / uranium
-- Clinical-stage biotech (warning: binary FDA events)
-- EV / batteries / energy storage
-- Crypto-adjacent equities (miners, exchanges)
-
-**Liquidity filter:** average daily dollar volume above about $5–10M and price above
+**Liquidity filter:** average daily dollar volume above about $10M and price above
 about $3. This keeps bid-ask spreads and market impact manageable for an account of
 tens of thousands of dollars.
 
@@ -169,7 +187,45 @@ LLM rather than a bigger price model:
 - **Taxes:** short-term gains are taxed as ordinary income. Add an after-tax P&L view
   and a turnover penalty in rewards.
 
-### 4.5 Baselines (everything must beat these after costs)
+### 4.5 Free-data strategy and the failure hunt
+Free price sources (Yahoo) mostly omit delisted companies, so a naive backtest only
+sees survivors. Countermeasures:
+
+1. **Failure ledger** (`data/failures/ledger.csv`, `src/ddb/data/failures.py`).
+   Every delisting and deregistration from EDGAR's quarterly full index since 2012
+   goes in it. Companies that still have a current ticker are excluded, because
+   their Form 25s cover notes, warrants or exchange moves. The simulator settles any
+   held position that stops trading at its ledger exit value:
+   - bankruptcy → 0
+   - forced delisting → 20% of last close
+   - unknown → 50% (configurable)
+2. **Universe event scan:** 8-K items (bankruptcy 1.03, delisting notice 3.01,
+   unregistered equity sales 3.02, restatement 4.02, acquisition 2.01) and dilution
+   filings (S-3, 424B5, S-1) for every candidate. These become warning features.
+3. **LLM failure research (Phase 5):** for each delisted CIK in the training
+   industries (selected by SIC code), the LLM reads the final 8-Ks / 10-Ks and records:
+   - the historical ticker
+   - what shareholders actually received (merger price, or 0)
+   - early warning signs: going-concern language, repeated dilution, auditor
+     changes, delisting notices
+
+   This yields a labeled failure set, so models learn what failure looks like
+   instead of only ever seeing winners.
+4. **Price cross-checks:** where free sources overlap (Yahoo vs. Alpaca free
+   historical bars vs. Stooq), flag mismatches before training.
+5. **Macro:** only unrevised market series from FRED (rates, spreads, VIX, oil, gas).
+   Revised series (GDP, CPI, payrolls) must come from ALFRED vintages. FRED now
+   serves only 3 years of ICE high-yield spreads (BAMLH0A0HYM2). For longer history,
+   use a price-based proxy instead (HYG vs. IEF total-return ratio).
+6. **Hindsight in the universe itself (the biggest bias right now).** The
+   candidate tickers in `configs/universe.yaml` were picked in 2026, by people who
+   already know NVDA, PLTR and VST won. Any backtest of that list since 2015 is
+   inflated, including the baselines. The fix is a **rule-based, point-in-time
+   universe**: at each rebalance date, choose names from the training universe by
+   SIC code, liquidity and trailing growth, using only data knowable then. The
+   hand-picked list is for plumbing tests only.
+
+### 4.6 Baselines (everything must beat these after costs)
 1. Buy-and-hold equal-weight focus universe
 2. Buy-and-hold industry ETFs
 3. QQQ / SPY buy-and-hold
@@ -211,7 +267,7 @@ LLM rather than a bigger price model:
 - Reward: differential Sharpe, or log return − λ·drawdown − costs − tax drag.
 - **Hysteresis:** require the signal to persist before switching between risk-on and
   risk-off. Whipsawing is expensive with taxes and wash sales.
-- Simpler baseline to beat: a contextual bandit, and the trend-filter rule (§4.5 #5).
+- Simpler baseline to beat: a contextual bandit, and the trend-filter rule (§4.6 #5).
 
 ### 5.5 Risk overlay (hard rules, outside all models)
 - Max 15% per name, max 50% per industry (tunable)
@@ -322,11 +378,18 @@ Decision rule: total the measured monthly GPU-hours × cloud rate over 24–36 m
 and compare against hardware + power. Revisit after Phase 7.
 
 ### 9.3 Broker / execution
-- Pick a broker with a documented programmatic equities API and a paper-trading
-  account (e.g. Alpaca or Interactive Brokers). Check whether your current broker
-  supports automated equity orders before relying on it.
+- **Alpaca for the experiment:**
+  - free paper-trading account with the same API as live trading
+  - commission-free US stocks and ETFs
+  - fractional shares
+  - free historical bars, usable for cross-checking Yahoo
+- Robinhood (the user's current broker): fine for comparison and manual review.
+  Confirm it offers a supported equities trading API before building automated
+  execution on it.
 - At first, every live order goes through a review step. Fully automated orders come
   only after Live 1.
+- The simulator models a **cash account** (T+1 settlement, good-faith rule), so
+  pattern-day-trader margin rules don't apply.
 
 ---
 
@@ -367,12 +430,52 @@ dolla-dolla-bills/
 
 ---
 
-## 12. Open questions
+## 12. Phase 1 status
 
-1. Which 2–4 industries? (Pick by liquidity, data history, and how much you know
-   about the domain.)
-2. Data budget: free sources (EDGAR, FRED, yfinance for prototyping only) vs. a paid
-   survivorship-free source (Norgate / Sharadar / Polygon class)?
-3. Which broker for paper and live trading?
-4. Acceptable max drawdown for the live account (e.g. 25%? 35%?). This sets the
-   circuit breaker and the reward's λ.
+Done:
+- [x] Repo scaffold, configs (`configs/universe.yaml`, `configs/sim.yaml`)
+- [x] Point-in-time store with restatement handling (`src/ddb/data/store.py`)
+- [x] Free data sources:
+  - Yahoo daily prices + dividends/splits
+  - FRED market series
+  - EDGAR form index, submissions, XBRL company facts
+- [x] Failure ledger + EDGAR exit/8-K/dilution scan (`scripts/scan_failures.py`)
+- [x] Execution simulator (`src/ddb/sim/`):
+  - next-day fills with jitter
+  - tiered spread + square-root impact + participation cap
+  - cash account: T+1 settlement, good-faith rule, FIFO lots, wash sales, tax estimate
+  - delisting exits
+- [x] Baselines + 18-month metrics (`scripts/run_baselines.py`)
+
+Phase 1 baseline scoreboard (2015-01 → 2026-11, $10k, after costs and taxes paid each
+January; **hand-picked, hindsight-biased universe, so plumbing check only**):
+
+| Strategy | CAGR | Max DD | Median 18m | 5th pct 18m | Taxes paid |
+|---|---|---|---|---|---|
+| SPY buy & hold | 11.7% | −31% | +24% | −5% | $0 |
+| QQQ buy & hold | 16.5% | −34% | +33% | −14% | $0 |
+| Focus EW buy & hold | 34.0% | −50% | +74% | +5% | $0 |
+| Focus EW monthly rebalance | 26.8% | −52% | +50% | −8% | $21k |
+| Focus trend → T-bills | 21.0% | −40% | +43% | −23% | $15k |
+| Focus 12-1 momentum, top 5 | 44.2% | −39% | +94% | +16% | $157k |
+
+Early observations:
+- Rebalancing and rotation lose to buy-and-hold mostly because of short-term taxes
+  and wash sales. Turnover has a real cost.
+- The 200-day trend filter cut drawdown, but its worst 18-month windows were
+  worse: it whipsawed out and missed the rebounds.
+
+Next:
+- [ ] **Rule-based point-in-time universe selection** (removes the hindsight bias above)
+- [ ] Training universe from EDGAR SIC codes, including delisted CIKs
+- [ ] Historical ticker resolution for delisted CIKs
+- [ ] XBRL fundamentals ingestion into the PIT store for the training universe
+- [ ] Walk-forward / purged CV harness (needed before Phase 2)
+- [ ] Price cross-check against a second free source
+- [ ] HPC: Slurm + Apptainer definitions
+
+## 13. Open questions
+1. Seed list for the rotating pool. The initial pool is in `configs/universe.yaml`.
+   Edit freely.
+2. Check the university HPC acceptable-use policy before training trading models on
+   it.

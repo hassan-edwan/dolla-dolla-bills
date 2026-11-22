@@ -1,0 +1,51 @@
+# Trading universe configuration.
+#
+# Tickers below are INITIAL CANDIDATES for research, not recommendations.
+# The final focus set is chosen by the liquidity filter plus (later) the
+# rotation logic. Phase 1 uses them to exercise the data layer and the baselines.
+
+liquidity_filter:
+  min_avg_dollar_volume: 10_000_000   # 20-day average close*volume, USD
+  min_price: 3.0
+
+# Two fixed core industries.
+core_industries:
+  tech:
+    benchmark: XLK
+    candidates: [NVDA, AMD, AVGO, MU, MRVL, ARM, SMCI, PLTR, TSM, ANET]
+  energy:
+    benchmark: XLE
+    candidates: [OXY, DVN, FANG, APA, EQT, AR, HAL, FSLR, ENPH, VST]
+
+# Two rotating slots, filled from this pool. Re-evaluated monthly with
+# hysteresis (Phase 3+). Every pool industry stays in the TRAINING universe
+# even while it is not selected for trading.
+rotating:
+  slots: 2
+  review_frequency: monthly
+  min_months_between_swaps: 2
+  pool:
+    nuclear:      {benchmark: URA,  candidates: [CCJ, OKLO, SMR, LEU, NNE, BWXT]}
+    quantum:      {benchmark: QTUM, candidates: [IONQ, RGTI, QBTS, QUBT]}
+    space:        {benchmark: UFO,  candidates: [RKLB, ASTS, LUNR, PL, RDW]}
+    crypto_adj:   {benchmark: BITQ, candidates: [COIN, MSTR, MARA, RIOT, CLSK, HOOD]}
+    ev_battery:   {benchmark: LIT,  candidates: [TSLA, RIVN, QS, ALB, LCID]}
+    gene_biotech: {benchmark: XBI,  candidates: [CRSP, NTLA, BEAM, VRTX, MRNA]}
+    robotics_ai:  {benchmark: BOTZ, candidates: [ISRG, SYM, PATH, TER]}
+
+# Defensive sleeve the central allocator can rotate into.
+safe_haven:
+  gold:   [GLD, IAU]
+  silver: [SLV]
+  tbills: [SGOV, BIL]
+  cash_proxy: BIL        # used by baselines as the risk-off asset
+
+benchmarks: [SPY, QQQ, SMH, XLK, XLE]
+
+# Training universe: built from EDGAR by SIC code, including companies that
+# delisted, went bankrupt or were acquired (see scripts/scan_failures.py).
+training_universe:
+  sic_codes:
+    tech:   [3570, 3571, 3572, 3576, 3577, 3661, 3663, 3669, 3672, 3674, 3679, 7370, 7371, 7372, 7373, 7374]
+    energy: [1311, 1381, 1382, 1389, 2911, 4911, 4931, 4991, 3433, 3690]
+  start_year: 2005

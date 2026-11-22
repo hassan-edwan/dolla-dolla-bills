@@ -1,0 +1,43 @@
+# Execution simulator configuration.
+
+initial_cash: 10_000
+
+execution:
+  # Decisions are made on the close of day t and filled on day t+1.
+  fill: open              # "open" | "typical" ((H+L+C)/3 of the fill day)
+  jitter: 0.25            # random blend toward the fill day's typical price, 0..1
+  seed: 7
+  min_trade_value: 25     # ignore rebalances smaller than this (USD)
+
+costs:
+  commission_per_order: 0.0
+  # Half-spread by liquidity tier: [min 20d avg dollar volume, half-spread bps].
+  spread_tiers:
+    - [1_000_000_000, 1.0]
+    - [100_000_000, 3.0]
+    - [20_000_000, 8.0]
+    - [5_000_000, 20.0]
+    - [0, 50.0]
+  open_spread_multiplier: 1.5   # spreads are wider at the open
+  impact_coef: 0.1              # slippage += coef * daily_vol * sqrt(order/ADV)
+  max_participation: 0.01       # never trade more than 1% of ADV per day
+
+account:
+  type: cash
+  settlement_days: 1            # T+1
+  wash_sale_window_days: 30
+  pay_taxes: true               # pay last year's tax on the first trading day of each year
+  short_term_tax_rate: 0.32     # federal estimate; adjust for your bracket + state
+  long_term_tax_rate: 0.15
+
+delisting:
+  # When a held symbol's data ends early and the failure ledger has no
+  # terminal value for it, assume this fraction of the last close is recovered.
+  unknown_exit_recovery: 0.5
+
+objective:
+  # Primary metric: distribution of rolling 18-month log returns.
+  horizon_trading_days: 378
+  # Not a risk limit. If live drawdown exceeds the backtest's 99th-percentile
+  # drawdown, the model is assumed broken and trading halts for review.
+  model_broken_drawdown_quantile: 0.99
