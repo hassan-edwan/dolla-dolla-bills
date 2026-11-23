@@ -171,13 +171,13 @@ def test_weapons_spending_counts_only_weapons_codes():
     ws = yaml.safe_load((CONFIG_DIR / "screens.yaml").read_text())["weapons"]["weapons_spending"]
     con = duckdb.connect()
     con.execute("""CREATE TABLE t AS SELECT * FROM (VALUES
-        ('1425', '336411', 'guided missile systems'),     -- weapons
-        ('1305', NULL,     'ammunition'),                 -- weapons
-        ('AC23', NULL,     'missile & space R&D'),        -- weapons R&D (gray zone, excluded outright)
-        ('6505', '325412', 'drugs and biologicals'),      -- medical countermeasures: not weapons
-        ('AJ11', NULL,     'general science research'),   -- basic research: not weapons
-        ('D399', '541512', 'IT services'),                -- not weapons
-        ('5998', '332994', 'parts, but small-arms maker NAICS')  -- weapons by industry code
-        ) v(psc, naics, what)""")
+        ('1425', '336411', 'GUIDED MISSILE SYSTEMS, COMPLETE', 'guided missile systems'),
+        ('1305', NULL, 'AMMUNITION, THROUGH 30MM', 'ammunition'),
+        ('AC23', NULL, 'R&D-MISSILE & SPACE SYS-ADV DEV', 'missile & space R&D'),
+        ('AC12', NULL, 'NATIONAL DEFENSE R&D SERVICES; DEPARTMENT OF DEFENSE - MILITARY; APPLIED RESEARCH', 'generic defense research'),
+        ('6505', '325412', 'DRUGS AND BIOLOGICALS', 'drugs and biologicals'),
+        ('D399', '541512', 'IT AND TELECOM- OTHER IT', 'IT services'),
+        ('5998', '332994', 'ELECTRICAL HARDWARE', 'parts, but small-arms maker NAICS')
+        ) v(psc, naics, psc_description, what)""")
     hits = [r[0] for r in con.execute(f"SELECT what FROM t WHERE {weapons_spending_filter(ws)}").fetchall()]
     assert hits == ["guided missile systems", "ammunition", "missile & space R&D", "parts, but small-arms maker NAICS"]

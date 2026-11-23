@@ -47,7 +47,10 @@ weapons:
     max_revenue_share: 0.05
     psc_prefixes: ["10", "11", "12", "13", "14"]   # weapons, nuclear ordnance, fire control, ammunition & explosives, guided missiles
     psc_codes: ["1510", "1520", "1550", "1905", "2350"]   # military fixed-wing & rotary aircraft, drones, combat ships, combat vehicles
-    psc_rd_prefixes: ["AC1", "AC2", "AC3", "AC4", "AC5"]  # defense R&D: aircraft, missile & space, ships, tank-automotive, weapons
+    # Defense R&D (PSC "AC..") counts only when its description names a weapons system.
+    # Since FY2021 codes AC11-AC13/AC31-AC33 mean generic "national defense R&D services"
+    # (any research), so prefixes alone can't be used.
+    psc_rd_keywords: [MISSILE, WEAPON, AIRCRAFT, SHIP, TANK]
     naics: ["332992", "332993", "332994", "336414", "336415", "336992"]   # ammunition, ordnance, guided missiles & propulsion, armored vehicles
   # Known weapons manufacturers / major weapons-systems suppliers (business identity, not performance)
   manual_fail:

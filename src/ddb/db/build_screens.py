@@ -267,7 +267,9 @@ def weapons_spending_filter(ws: dict) -> str:
     """SQL condition: a DoD transaction counts as weapons spending."""
     conds = [f"psc LIKE '{p}%' AND length(psc) = 4 AND regexp_matches(psc, '^[0-9]+$')" for p in ws["psc_prefixes"]]
     conds += [f"psc = '{c}'" for c in ws["psc_codes"]]
-    conds += [f"psc LIKE '{p}%'" for p in ws["psc_rd_prefixes"]]
+    kw = "|".join(ws["psc_rd_keywords"])
+    conds += [f"psc LIKE 'AC%' AND regexp_matches(upper(psc_description), '{kw}') "
+              f"AND NOT upper(psc_description) LIKE 'NATIONAL DEFENSE R&D SERVICES%'"]
     conds += [f"CAST(naics AS VARCHAR) = '{n}'" for n in ws["naics"]]
     return "(" + " OR ".join(f"({c})" for c in conds) + ")"
 
