@@ -99,15 +99,44 @@ The database enforces this:
    matched to a CIK across all of EDGAR, the company is force-added, and the
    industry tag is dated from when the company entered the business.
 
+## Coverage (build of 2026-11-23)
+
+| Table | Rows |
+|---|---|
+| companies | 9,950 (2,512 listed now, 7,438 gone) |
+| filings | 4.3M |
+| events | 350k |
+| fundamentals (fact versions) | 43.1M, for 6,078 companies |
+| prices (daily bars) | 8.6M, for 2,953 tickers, 2000-01 → 2026-11 |
+| macro | 83k |
+| outcome labels | 10.5k |
+| research notes | 2.4k |
+
+| Industry (any time since 2005) | Companies | Listed now | Gone | Web-researched |
+|---|---|---|---|---|
+| tech | 3,019 | 843 | 2,176 | 94 |
+| energy | 2,503 | 488 | 2,015 | 90 |
+| gene_biotech | 2,273 | 868 | 1,405 | 0 |
+| ev_battery | 432 | 169 | 263 | 93 |
+| robotics_ai | 204 | 131 | 73 | 72 |
+| nuclear | 118 | 50 | 68 | 46 |
+| crypto_adj | 112 | 83 | 29 | 69 |
+| space | 106 | 47 | 59 | 46 |
+| quantum | 43 | 29 | 14 | 17 |
+
+How companies left: 1,634 acquired · 495 bankrupt · 535 forced delisting ·
+1,238 deregistered · 20 went private · 2,011 unknown · 2,488 active.
+
 ## Known gaps
 
 - **Financials before ~2009:** XBRL started in 2009–2011, so earlier periods
   have filings and events but no structured numbers. Parsing old 10-K text is a
   later job.
-- **Prices for dead companies:** Yahoo rarely serves delisted tickers. Their
-  filings, events, financials and outcome labels are still in the database, which
-  is enough to learn failure warning signs. Price-based backtests of them need
-  another source.
+- **Prices for dead companies (biggest gap):** only 19 of 7,438 gone companies
+  have prices, because Yahoo drops delisted tickers. Their filings, events,
+  financials and outcome labels are complete, which is enough to learn failure
+  warning signs. Price-based backtests of them need a second source; candidates
+  are Alpaca's free historical data (free account + API key) and Stooq.
 - **Outcome labels:** about 2,200 "unknown" rule outcomes (stopped filing with no
   clear exit filing) and the open research queue.
 - **Research rows:** partly from the researchers' own knowledge and partly
