@@ -64,3 +64,19 @@ def test_unadjust_reverses_later_splits():
     assert out["close_raw"].iloc[0] == pytest.approx(0.10)      # actually traded at $0.10
     assert out["volume_raw"].iloc[0] == pytest.approx(5000)
     assert out["close_raw"].iloc[-1] == pytest.approx(5.0)
+
+
+PTR_SAMPLE = """
+           SP         Albemarle Corporation (ALB) [ST]            S                 12/21/2023 01/08/2024             $1,001 - $15,000
+           SP         Charles Schwab Corporation (SCHW) P                           12/14/2023 01/08/2024             $50,001 -
+                      [ST]                                                                                            $100,000
+"""
+
+
+def test_ptr_parser_handles_wrapped_fields():
+    from ddb.db.build_congress import parse_ptr_text
+    rows = parse_ptr_text(PTR_SAMPLE)
+    assert [r["ticker"] for r in rows] == ["ALB", "SCHW"]
+    assert rows[0]["transaction_type"] == "sell" and rows[0]["amount_max"] == 15000
+    assert rows[1]["transaction_type"] == "buy" and rows[1]["asset_type"] == "ST"
+    assert (rows[1]["amount_min"], rows[1]["amount_max"]) == (50001, 100000)

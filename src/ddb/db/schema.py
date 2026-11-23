@@ -165,7 +165,8 @@ CREATE TABLE IF NOT EXISTS research_queue (
 """
 
 FEATURE_TABLES = ["company_names", "company_industries", "tickers", "filings", "events",
-                  "fundamentals", "prices", "corporate_actions", "macro"]
+                  "fundamentals", "prices", "corporate_actions", "macro",
+                  "insider_transactions", "politician_trades"]
 LABEL_TABLES = ["outcomes"]
 
 
@@ -217,6 +218,12 @@ def connect(path, read_only: bool = False):
                             f"WHERE table_name = '{name}'").fetchall()
             if k and k[0][0] == "BASE TABLE":
                 con.execute(f"DROP TABLE {name}")
+            con.execute(f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM "
+                        f"read_parquet('{d.as_posix()}/*.parquet', union_by_name=true)")
+    # Other Parquet-backed feature tables (one directory each).
+    for name in ("insider_transactions", "politician_trades"):
+        d = path.parent / "db" / name
+        if d.exists() and any(d.glob("*.parquet")):
             con.execute(f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM "
                         f"read_parquet('{d.as_posix()}/*.parquet', union_by_name=true)")
     log = path.parent / "db" / "price_fetch_log.csv"

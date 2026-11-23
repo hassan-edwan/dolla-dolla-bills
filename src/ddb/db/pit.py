@@ -26,7 +26,9 @@ class AsOf:
 
     def __enter__(self):
         c = self.con
-        for tbl in FEATURE_TABLES:
+        existing = {r[0] for r in c.execute("SELECT table_name FROM information_schema.tables").fetchall()}
+        self.tables = [t for t in FEATURE_TABLES if t in existing]
+        for tbl in self.tables:
             c.execute(f"CREATE OR REPLACE TEMP VIEW {tbl}_pit AS "
                       f"SELECT * FROM main.{tbl} WHERE knowable_at <= TIMESTAMPTZ '{self.t.isoformat()}'")
         return self
@@ -41,12 +43,12 @@ class AsOf:
                                          "use company_names / company_industries / tickers")
                 raise LookaheadError(f"{tbl} is not available to point-in-time feature queries")
         rewritten = sql
-        for tbl in sorted(FEATURE_TABLES, key=len, reverse=True):
+        for tbl in sorted(self.tables, key=len, reverse=True):
             rewritten = _replace_table(rewritten, tbl, f"{tbl}_pit")
         return self.con.execute(rewritten, params or []).df()
 
     def __exit__(self, *exc):
-        for tbl in FEATURE_TABLES:
+        for tbl in self.tables:
             self.con.execute(f"DROP VIEW IF EXISTS {tbl}_pit")
         return False
 

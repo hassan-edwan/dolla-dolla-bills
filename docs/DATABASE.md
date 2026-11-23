@@ -10,6 +10,7 @@ export DDB_SEC_USER_AGENT="dolla-dolla-bills you@example.com"
 python scripts/build_database.py --download   # first time (~3GB of SEC bulk files)
 python scripts/build_database.py              # rebuild all steps
 python scripts/db_report.py                   # coverage report
+# Alpaca step needs a free key in ~/.config/ddb/alpaca.env (APCA_API_KEY_ID / APCA_API_SECRET_KEY)
 ```
 
 ## The no-hindsight rule
@@ -24,6 +25,8 @@ The database enforces this:
    | Filings, events | SEC acceptance timestamp |
    | XBRL financials | acceptance time of the filing that reported that version |
    | Daily prices | 21:00 UTC on the bar date (after the US close) |
+| Insider trades | Form 4 acceptance time (not the trade date) |
+| Congressional trades | the day after the disclosure filing (not the trade date) |
    | Splits/dividends | 13:00 UTC on the ex-date |
    | FRED market series | the day after the observation |
    | Company names / industry tags | start date of the name or tag |
@@ -72,6 +75,8 @@ The database enforces this:
 | `prices` | feature | daily OHLCV, split-adjusted plus as-traded (view over Parquet) |
 | `corporate_actions` | feature | splits, dividends |
 | `macro` | feature | FRED market series (rates, VIX, spreads, oil, gas, dollar) |
+| `insider_transactions` | feature | every Form 3/4/5 transaction since 2006: owner, role, code, shares, price, 10b5-1 flag. `knowable_at` = filing acceptance; `filing_lag_days`; `trans_date_suspect` flags filer typos |
+| `politician_trades` | feature | congressional trades (opt-in, see `RESEARCH_TRACKS.md` #9). `knowable_at` = day after disclosure |
 | `outcomes` | **label** | how each company's listing ended: `rule` (from final filings) and `research` (web-verified) |
 | `research_notes` | provenance | every web-researched fact with source URL and confidence |
 | `research_queue` | to-do | open lookups: unknown outcomes, missing historical tickers, unmatched seeds |
@@ -132,8 +137,10 @@ How companies left: 1,634 acquired · 495 bankrupt · 535 forced delisting ·
 - **Financials before ~2009:** XBRL started in 2009–2011, so earlier periods
   have filings and events but no structured numbers. Parsing old 10-K text is a
   later job.
-- **Prices for dead companies (biggest gap):** only 19 of 7,438 gone companies
-  have prices, because Yahoo drops delisted tickers. Their filings, events,
+- **Prices for dead companies (biggest gap):** Yahoo drops delisted tickers.
+  Alpaca's delisted securities were matched by name to 1,070 dead companies, and
+  207 of them got daily bars (221k bars, 2016+; Alpaca history starts in 2016).
+  Companies that died before 2016 still lack prices. Their filings, events,
   financials and outcome labels are complete, which is enough to learn failure
   warning signs. Price-based backtests of them need a second source; candidates
   are Alpaca's free historical data (free account + API key) and Stooq.

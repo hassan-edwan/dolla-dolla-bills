@@ -412,7 +412,7 @@ and compare against hardware + power. Revisit after Phase 7.
 | Phase | Deliverable | Rough time |
 |---|---|---|
 | 1 | Repo scaffold, point-in-time data layer, execution simulator (§4), baselines | ✅ done |
-| 1b | **Company database**: every company ever in the target industries, incl. failures; filings, events, financials, prices, outcome labels; LLM-researched seeds (`docs/DATABASE.md`) | 🔄 in progress |
+| 1b | **Company database** (`docs/DATABASE.md`, research tracks in `docs/RESEARCH_TRACKS.md`): every company ever in the target industries, incl. failures; filings, events, financials, prices, outcome labels; LLM-researched seeds (`docs/DATABASE.md`) | 🔄 in progress |
 | 2 | Thesis agents (supervised) + population manager | 3–4 wks |
 | 3 | Regime detector + single-level RL allocator (focus + haven) | 2–3 wks |
 | 4 | Full hierarchy: industry managers + central allocator + risk overlay | 3–4 wks |

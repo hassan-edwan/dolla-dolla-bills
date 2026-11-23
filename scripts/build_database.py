@@ -5,7 +5,8 @@
     python scripts/build_database.py                     # rebuild everything from the bulk files
     python scripts/build_database.py --steps prices      # one step
 
-Steps: companies -> fundamentals -> macro -> research -> prices
+Steps: companies -> fundamentals -> macro -> research -> prices -> alpaca -> insiders
+(congress is separate and opt-in: see docs/RESEARCH_TRACKS.md #9)
 """
 import argparse
 import subprocess
@@ -13,7 +14,7 @@ import subprocess
 from ddb.config import DATA_DIR
 from ddb.data.http import sec_user_agent
 
-STEPS = ["companies", "fundamentals", "macro", "research", "prices"]
+STEPS = ["companies", "fundamentals", "macro", "research", "prices", "alpaca", "insiders"]
 BULK = {"submissions.zip": "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip",
         "companyfacts.zip": "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip"}
 
@@ -50,6 +51,12 @@ def main():
             print(run())
         elif step == "prices":
             from ddb.db.build_prices import build
+            print(build())
+        elif step == "alpaca":
+            from ddb.db.build_alpaca import build   # needs a free Alpaca key (~/.config/ddb/alpaca.env)
+            print(build())
+        elif step == "insiders":
+            from ddb.db.build_insiders import build
             print(build())
 
 
