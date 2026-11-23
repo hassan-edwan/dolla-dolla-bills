@@ -279,6 +279,20 @@ sees survivors. Countermeasures:
 
 ## 6. Research LLM
 
+**Two roles, at different times:**
+- **Now (database building):** the LLM is a *research assistant for building the
+  training database*. It looks up information the free sources miss:
+  - which companies belong to each industry, especially ones the SEC codes miss
+  - failed and delisted companies
+  - historical tickers
+  - how each listing ended
+
+  Every fact is stored with its source URL, a confidence level and the date it
+  refers to (`docs/DATABASE.md`). It does **not** generate features or make
+  decisions yet.
+- **Later (once the system is in use):** feature extraction and lookups, as
+  described below.
+
 - **Model:** a local 14–32B open-weights model (Qwen / Llama class), 4-bit quantized,
   served with vLLM or llama.cpp.
 - **Tools:** retrieval (RAG) over SEC EDGAR filings and transcripts, news, FRED, and a
@@ -397,7 +411,8 @@ and compare against hardware + power. Revisit after Phase 7.
 
 | Phase | Deliverable | Rough time |
 |---|---|---|
-| 1 | Repo scaffold, point-in-time data layer, execution simulator (§4), baselines | 3–5 wks |
+| 1 | Repo scaffold, point-in-time data layer, execution simulator (§4), baselines | ✅ done |
+| 1b | **Company database**: every company ever in the target industries, incl. failures; filings, events, financials, prices, outcome labels; LLM-researched seeds (`docs/DATABASE.md`) | 🔄 in progress |
 | 2 | Thesis agents (supervised) + population manager | 3–4 wks |
 | 3 | Regime detector + single-level RL allocator (focus + haven) | 2–3 wks |
 | 4 | Full hierarchy: industry managers + central allocator + risk overlay | 3–4 wks |

@@ -1,0 +1,56 @@
+# Industry taxonomy for the company database.
+#
+# A company gets an industry tag from two kinds of rules:
+#   sic       - SEC Standard Industrial Classification. EDGAR only exposes the
+#               CURRENT code, so a SIC tag is valid from the company's first
+#               filing under its current name. Earlier periods need a name match.
+#   keywords  - matched against each company NAME in its dated name history
+#               (EDGAR formerNames). The tag is valid only while that name was
+#               in use, so a biotech that renamed itself "X Blockchain" in 2017
+#               is crypto only from 2017.
+# Tags are hints. Ambiguous ones go to the research queue for verification.
+
+exclude_sic: [6770]   # blank-check shells / SPACs (pre-merger)
+
+industries:
+  tech:
+    sub_industries:
+      semiconductors:   {sic: [3674, 3672, 3679, 3825, 3559]}
+      hardware:         {sic: [3570, 3571, 3572, 3575, 3576, 3577, 3578]}
+      comms_equipment:  {sic: [3661, 3663, 3669]}
+      software:         {sic: [7370, 7371, 7372, 7373, 7374]}
+  energy:
+    sub_industries:
+      oil_gas:          {sic: [1311, 1381, 1382, 1389, 2911, 4612, 4613, 4922, 4923, 5171, 5172]}
+      coal:             {sic: [1220, 1221]}
+      power:            {sic: [4911, 4931, 4991]}
+      energy_other:     {keywords: [energy, petroleum, " oil ", " gas ", drilling, exploration]}
+      solar_renewables: {sic: [3433], keywords: [solar, renewable, wind energy, "clean energy", hydrogen, fuel cell, geothermal]}
+  nuclear:
+    sub_industries:
+      uranium_nuclear:  {sic: [1090, 1094], keywords: [uranium, nuclear, fusion, "small modular"]}
+  quantum:
+    sub_industries:
+      quantum:          {keywords: [quantum]}
+  space:
+    sub_industries:
+      space:            {sic: [3760, 3761, 3764, 3769], keywords: [space, satellite, orbital, rocket, aerospace, "launch"]}
+  crypto_adj:
+    sub_industries:
+      crypto:           {keywords: [bitcoin, crypto, blockchain, "digital asset", "hash ", coinbase, "btc "]}
+  ev_battery:
+    sub_industries:
+      ev_battery:       {sic: [3711, 3713, 3714, 3690, 3691], keywords: [lithium, battery, batteries, "electric vehicle", "ev ", "charging", "motors "]}
+  gene_biotech:
+    sub_industries:
+      biotech:          {sic: [2834, 2835, 2836, 8731], keywords: [therapeutics, genomics, biotech, " gene ", bio, oncology, pharma]}
+  robotics_ai:
+    sub_industries:
+      robotics_ai:      {sic: [3569, 3823], keywords: [robot, autonomous, "artificial intelligence", "ai "]}
+
+# Keyword rules that are too broad on their own (e.g. "space" matches "Space
+# Storage Inc") are tagged with confidence=low and queued for verification.
+low_confidence_keywords: [exploration, energy, space, bio, "motors ", "hash ", "btc ", "ai ", "ev ", " gene ", launch, charging, aerospace, pharma, autonomous]
+
+# Operating-company filter: must have filed at least one of these.
+annual_report_forms: ["10-K", "10-K405", "10-KSB", "20-F", "40-F"]

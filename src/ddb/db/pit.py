@@ -1,0 +1,81 @@
+"""The only supported way for feature code to read the database.
+
+    with AsOf(con, "2019-06-28 20:00") as db:
+        db.query("SELECT * FROM fundamentals WHERE cik = 320193")
+
+Inside an AsOf context, every FEATURE table name resolves to a temporary view
+filtered to ``knowable_at <= t``. Label tables (outcomes) are not exposed, so a
+query that touches them fails instead of leaking the future.
+"""
+from __future__ import annotations
+
+import pandas as pd
+
+from .schema import FEATURE_TABLES, LABEL_TABLES
+
+
+class LookaheadError(RuntimeError):
+    pass
+
+
+class AsOf:
+    def __init__(self, con, t):
+        ts = pd.Timestamp(t)
+        self.t = ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
+        self.con = con
+
+    def __enter__(self):
+        c = self.con
+        for tbl in FEATURE_TABLES:
+            c.execute(f"CREATE OR REPLACE TEMP VIEW {tbl}_pit AS "
+                      f"SELECT * FROM main.{tbl} WHERE knowable_at <= TIMESTAMPTZ '{self.t.isoformat()}'")
+        return self
+
+    def query(self, sql: str, params=None) -> pd.DataFrame:
+        low = sql.lower()
+        for tbl in LABEL_TABLES + ["research_notes", "research_queue", "companies"]:
+            if f" {tbl}" in low or f"\n{tbl}" in low or f".{tbl}" in low:
+                if tbl == "companies":
+                    # companies holds CURRENT-state columns (tickers, SIC, listing status).
+                    raise LookaheadError("companies holds current (hindsight) state; "
+                                         "use company_names / company_industries / tickers")
+                raise LookaheadError(f"{tbl} is not available to point-in-time feature queries")
+        rewritten = sql
+        for tbl in sorted(FEATURE_TABLES, key=len, reverse=True):
+            rewritten = _replace_table(rewritten, tbl, f"{tbl}_pit")
+        return self.con.execute(rewritten, params or []).df()
+
+    def __exit__(self, *exc):
+        for tbl in FEATURE_TABLES:
+            self.con.execute(f"DROP VIEW IF EXISTS {tbl}_pit")
+        return False
+
+    # -- convenience ----------------------------------------------------
+    def universe(self, industries=None) -> pd.DataFrame:
+        """Companies tagged to the industries at time t, using only what was known then."""
+        d = self.t.date().isoformat()
+        where = ""
+        if industries:
+            inds = ",".join(f"'{i}'" for i in industries)
+            where = f"AND industry IN ({inds})"
+        return self.query(f"""
+            SELECT DISTINCT cik, industry, sub_industry, method, confidence
+            FROM company_industries
+            WHERE valid_from <= DATE '{d}' AND (valid_to IS NULL OR valid_to > DATE '{d}') {where}
+        """)
+
+    def latest_fact(self, cik: int, concept: str, unit: str = "USD") -> pd.DataFrame:
+        """Latest-filed version of each period's value for a concept."""
+        return self.query(f"""
+            SELECT period_start, period_end, fp, form, value, knowable_at
+            FROM fundamentals
+            WHERE cik = {int(cik)} AND concept = '{concept}' AND unit = '{unit}'
+            QUALIFY row_number() OVER (PARTITION BY period_start, period_end
+                                       ORDER BY knowable_at DESC) = 1
+            ORDER BY period_end
+        """)
+
+
+def _replace_table(sql: str, name: str, new: str) -> str:
+    import re
+    return re.sub(rf"(?<![\w.]){name}(?![\w])", new, sql)

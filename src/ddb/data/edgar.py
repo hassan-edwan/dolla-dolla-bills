@@ -36,10 +36,22 @@ EIGHT_K_ITEMS = {
     "3.01": "delisting_notice",
     "3.02": "unregistered_equity_sale",   # dilution
     "4.02": "non_reliance_restatement",
+    "4.01": "auditor_change",
     "5.01": "change_in_control",
+    "5.02": "officer_director_change",
 }
 DILUTION_FORMS = {"S-3": "shelf_registration", "S-3ASR": "shelf_registration",
                   "424B5": "offering_prospectus", "S-1": "registration"}
+# Other forms that carry signal.
+OTHER_FORMS = {
+    "NT 10-K": "late_annual_report",     # distress / accounting trouble
+    "NT 10-Q": "late_quarterly_report",
+    "SC 13D": "activist_or_control_stake",
+    "SC TO-T": "tender_offer",
+    "DEFM14A": "merger_proxy",
+    "S-4": "merger_registration",
+    "10-12B": "spin_off_registration",
+}
 
 _IDX_LINE = re.compile(r"^(\S.*?)\s{2,}(.+?)\s{2,}(\d+)\s+(\d{4}-\d{2}-\d{2})\s+(\S+)\s*$")
 
@@ -116,6 +128,17 @@ def filings_frame(sub: dict) -> pd.DataFrame:
     return df
 
 
+def classify_filing(form: str, items) -> list[str]:
+    """Event types implied by one filing (form + 8-K items)."""
+    types = []
+    for table in (EXIT_FORMS, DILUTION_FORMS, OTHER_FORMS):
+        if form in table:
+            types.append(table[form])
+    if form.startswith("8-K") and isinstance(items, str) and items:
+        types += [EIGHT_K_ITEMS[i.strip()] for i in items.split(",") if i.strip() in EIGHT_K_ITEMS]
+    return types
+
+
 def filing_events(sub: dict) -> pd.DataFrame:
     """Failure, exit and dilution signals for one company, as dated events."""
     df = filings_frame(sub)
@@ -129,8 +152,10 @@ def filing_events(sub: dict) -> pd.DataFrame:
             types.append(EXIT_FORMS[r.form])
         if r.form in DILUTION_FORMS:
             types.append(DILUTION_FORMS[r.form])
+        if r.form in OTHER_FORMS:
+            types.append(OTHER_FORMS[r.form])
         if r.form.startswith("8-K") and isinstance(r.items, str):
-            types += [EIGHT_K_ITEMS[i] for i in r.items.split(",") if i.strip() in EIGHT_K_ITEMS]
+            types += [EIGHT_K_ITEMS[i.strip()] for i in r.items.split(",") if i.strip() in EIGHT_K_ITEMS]
         for t in types:
             out.append({"cik": int(sub["cik"]), "company": sub.get("name"), "event_type": t,
                         "event_date": r.filingDate, "knowable_at": r.acceptance,
