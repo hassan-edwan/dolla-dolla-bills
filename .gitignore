@@ -7,3 +7,4 @@ data/*
 !data/.gitkeep
 results/
 .env
+!data/research/
