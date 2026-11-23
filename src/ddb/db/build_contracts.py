@@ -54,6 +54,13 @@ def _post(session, payload, tries=4):
     return None
 
 
+def recipient_matches(recipient: str, targets) -> bool:
+    """Exact match, or prefix match only for multi-word names ("rocket lab" ->
+    "rocket lab national security"). One-word names ("quantum", "lucid") must match exactly."""
+    rn = norm_name(recipient or "")
+    return any(rn == t or (" " in t and rn.startswith(t + " ")) for t in targets)
+
+
 def fetch_company(session, names: list[str]) -> tuple[pd.DataFrame, bool]:
     targets = {norm_name(n) for n in names if len(norm_name(n)) >= 4}
     if not targets:
@@ -71,8 +78,7 @@ def fetch_company(session, names: list[str]) -> tuple[pd.DataFrame, bool]:
             if not d:
                 break
             for r in d.get("results", []):
-                rn = norm_name(r.get("Recipient Name") or "")
-                if any(rn == t or rn.startswith(t + " ") for t in targets):
+                if recipient_matches(r.get("Recipient Name"), targets):
                     rows.append(r)
             if not d.get("page_metadata", {}).get("hasNext"):
                 break

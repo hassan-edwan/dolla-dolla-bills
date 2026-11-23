@@ -20,7 +20,7 @@ Status: ✅ in the database · 🔄 partial · ⏸ waiting on a decision · 📋
 | 10 | **Which politicians oversee which industry** | `congress-legislators` (public domain): members, terms, and committee seats from 211 git snapshots since 2012; committee → industry map in `configs/committees.yaml` | first snapshot showing the seat | ✅ |
 | 11 | **Government contracts** per company | USAspending.gov API (public domain), transaction level, FY2008+ | action date + 90 days (DoD release delay) or + 5 days | 🔄 loading |
 | 12 | **Lobbying spend and issues** per company | Senate LDA API | filing date | 📋 (API down at last check) |
-| 13 | **Regulation and policy** affecting each industry | Federal Register API: 23 agencies mapped to industries (`configs/regulators.yaml`), 2005+ | publication morning | 🔄 loading |
+| 13 | **Regulation and policy** affecting each industry | Federal Register API: 23 agencies mapped to industries (`configs/regulators.yaml`), 2005+: 366,857 documents | publication morning | ✅ |
 | 14 | **Competitors and peers** | 10-K "Competition" sections (LLM reads filings) | 10-K acceptance time | 📋 |
 | 15 | **Valuation inputs** (multiples, growth, margins, dilution, cash runway) | derived from tracks 3–5 + 8 | max of the inputs' knowable_at | 📋 (Phase 2 features) |
 | 16 | Industry trend research (capacity, demand, prices) | EIA (energy), USPTO patents, Google Trends, filings | publication date | 📋 |
@@ -107,8 +107,8 @@ The plan, by what we want to predict:
 | **Where will bottlenecks arise?** | Supply constraints: "backlog", "lead times", "shortage", "allocation", "capacity constrained" language in 10-K/10-Q/8-K text, counted per industry over time | SEC filing text (LLM/keyword extraction, dated by acceptance) | 📋 |
 | | Physical supply data: oil/gas inventories, refinery use, power demand, uranium and lithium prices and production | EIA open data (free key), USGS mineral commodity data, FRED commodity series | 📋 (EIA key needed) |
 | | Chip supply chain: monthly semiconductor sales, imports/exports of chips and equipment | SIA/WSTS releases, Census trade data | 📋 |
-| | Licensing queues: reactor license dockets, launch licenses, spectrum filings, grid interconnection queues | Federal Register (✅ loading), NRC dockets, FCC filings, FERC | 🔄 |
-| | Trade friction: tariffs, anti-dumping on solar/batteries, export controls on AI chips/quantum | Federal Register (USTR, ITC, BIS, ITA) | 🔄 loading |
+| | Licensing queues: reactor license dockets, launch licenses, spectrum filings, grid interconnection queues | Federal Register (✅ loaded), NRC dockets, FCC filings, FERC | 🔄 |
+| | Trade friction: tariffs, anti-dumping on solar/batteries, export controls on AI chips/quantum | Federal Register (USTR, ITC, BIS, ITA) | ✅ data, features 📋 |
 | **Is the industry developing?** | Research velocity: papers per month (quantum, AI, batteries, fusion) | arXiv API | 📋 |
 | | Patent filings by company and industry | USPTO bulk data / PatentsView | 📋 |
 | | Government money flowing in: contracts and grants | USAspending (✅ loading) | 🔄 |

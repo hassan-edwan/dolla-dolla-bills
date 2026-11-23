@@ -33,12 +33,18 @@ def fetch(session, agency: str, year: int) -> list[dict]:
                   ("conditions[agencies][]", agency),
                   ("conditions[publication_date][gte]", f"{year}-01-01"),
                   ("conditions[publication_date][lte]", f"{year}-12-31")] + [("fields[]", f) for f in FIELDS]
-        for k in range(4):
-            r = session.get(API, params=params, timeout=90)
-            if r.status_code == 200:
-                break
-            time.sleep(2 ** k)
-        d = r.json()
+        d = None
+        for k in range(6):   # rate limits come back as HTML: back off and retry
+            try:
+                r = session.get(API, params=params, timeout=90)
+                if r.status_code == 200:
+                    d = r.json()
+                    break
+            except (requests.RequestException, ValueError):
+                pass
+            time.sleep(5 * 2 ** k)
+        if d is None:
+            raise RuntimeError(f"Federal Register: gave up on {agency} {year} page {page}")
         rows.extend(d.get("results") or [])
         if not d.get("next_page_url"):
             return rows

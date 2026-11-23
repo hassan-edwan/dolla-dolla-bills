@@ -66,6 +66,30 @@ class AsOf:
             WHERE valid_from <= DATE '{d}' AND (valid_to IS NULL OR valid_to > DATE '{d}') {where}
         """)
 
+    def tradable(self, industries=None, allow_review: bool = False) -> pd.DataFrame:
+        """Universe at t that passes every investment screen (configs/screens.yaml):
+        not Israeli, not a weapons maker, Sharia-compliant business, and the most
+        recent quarterly Sharia ratio check known at t is `pass`. `review` and
+        `unknown` are excluded unless allow_review=True (review only)."""
+        ok = "('pass', 'review')" if allow_review else "('pass')"
+        uni = self.universe(industries)
+        if uni.empty:
+            return uni
+        ts = self.t.isoformat()
+        st = self.con.execute(f"""
+            SELECT cik, bool_and(status IN {ok}) AS static_ok
+            FROM screen_static WHERE knowable_at <= TIMESTAMPTZ '{ts}' GROUP BY 1
+        """).df()
+        fin = self.con.execute(f"""
+            SELECT cik, status AS fin_status FROM screen_sharia_financial
+            WHERE knowable_at <= TIMESTAMPTZ '{ts}'
+            QUALIFY row_number() OVER (PARTITION BY cik ORDER BY as_of DESC) = 1
+        """).df()
+        out = uni.merge(st, on="cik", how="left").merge(fin, on="cik", how="left")
+        allowed = {"pass", "review"} if allow_review else {"pass"}
+        out = out[out["static_ok"].fillna(True) & out["fin_status"].isin(allowed)]
+        return out.drop(columns=["static_ok"])
+
     def latest_fact(self, cik: int, concept: str, unit: str = "USD") -> pd.DataFrame:
         """Latest-filed version of each period's value for a concept."""
         return self.query(f"""

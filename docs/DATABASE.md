@@ -61,6 +61,24 @@ The database enforces this:
    against `outcomes`, `companies` (current-state snapshot) or the research tables
    raise `LookaheadError`.
 
+## Investment screens (what may be traded)
+
+The user does not invest in **weapons makers**, **Israeli companies**, or
+companies that are **not Sharia compliant**. Rules are in `configs/screens.yaml`;
+the tables are built by `python -m ddb.db.build_screens`.
+
+| Screen | Rule | Dated? |
+|---|---|---|
+| `israel` | Fail if incorporated in Israel, or the SEC business/mailing address is in Israel (EDGAR code L3) | static |
+| `weapons` | Fail: ordnance/firearms/ammunition SIC codes, weapons keywords in any historical name, and a manual list of known weapons makers. Review: mixed civilian/military aerospace codes and defense keywords | static |
+| `weapons_dod` | Review once Department of Defense contract obligations exceed 10% of revenue in a year | yes (from the year it happens, after the 90-day DoD delay) |
+| `sharia_business` | Fail: interest-based finance, conventional insurance, alcohol, tobacco, gambling, cannabis. Review: crypto (scholars differ), brokers, REITs | static |
+| `sharia_financial` | AAOIFI-style ratios each quarter, using only data known then: debt / 36-month average market cap ≤ 30%; cash + interest-bearing securities / market cap ≤ 30%; interest income / total income ≤ 5%. Pre-revenue companies earning only interest → review. Missing data → unknown | yes (quarterly) |
+
+`AsOf(t).tradable()` returns the companies that pass every screen as known at t.
+`review` and `unknown` are **not** tradable by default. Screened-out companies
+stay in the database as training data (`exclude_from_training: false`).
+
 ## Tables
 
 | Table | Kind | Contents |
@@ -76,6 +94,12 @@ The database enforces this:
 | `corporate_actions` | feature | splits, dividends |
 | `macro` | feature | FRED market series (rates, VIX, spreads, oil, gas, dollar) |
 | `insider_transactions` | feature | every Form 3/4/5 transaction since 2006: owner, role, code, shares, price, 10b5-1 flag. `knowable_at` = filing acceptance; `filing_lag_days`; `trans_date_suspect` flags filer typos |
+| `gov_contracts` | feature | federal contract transactions (never award totals); `knowable_at` = action date + 90 days for DoD, + 5 otherwise |
+| `regulatory_documents` | feature | Federal Register rules/notices for 23 industry-shaping agencies, 2005+; `knowable_at` = publication morning |
+| `legislators`, `legislator_terms` | reference | members of Congress since 2005 with terms |
+| `committee_seats` | feature | dated committee seats from 2012 (git snapshots of congress-legislators) |
+| `committee_industries` | reference | committee → industries it oversees (`configs/committees.yaml`) |
+| `screen_static`, `screen_dod_share`, `screen_sharia_financial` | screens | investment screens (above) |
 | `politician_trades` | feature | congressional trades (opt-in, see `RESEARCH_TRACKS.md` #9). `knowable_at` = day after disclosure |
 | `outcomes` | **label** | how each company's listing ended: `rule` (from final filings) and `research` (web-verified) |
 | `research_notes` | provenance | every web-researched fact with source URL and confidence |

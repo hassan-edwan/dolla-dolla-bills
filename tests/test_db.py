@@ -80,3 +80,27 @@ def test_ptr_parser_handles_wrapped_fields():
     assert rows[0]["transaction_type"] == "sell" and rows[0]["amount_max"] == 15000
     assert rows[1]["transaction_type"] == "buy" and rows[1]["asset_type"] == "ST"
     assert (rows[1]["amount_min"], rows[1]["amount_max"]) == (50001, 100000)
+
+
+def test_tradable_applies_screens_point_in_time(tmp_path):
+    con = connect(tmp_path / "s.duckdb")
+    con.execute("""INSERT INTO company_industries VALUES
+        (1, 'tech', 'semis', 'sic', '3674', 'high', DATE '2010-01-01', NULL, TIMESTAMPTZ '2010-01-01 00:00:00+00'),
+        (2, 'tech', 'semis', 'sic', '3674', 'high', DATE '2010-01-01', NULL, TIMESTAMPTZ '2010-01-01 00:00:00+00'),
+        (3, 'tech', 'semis', 'sic', '3674', 'high', DATE '2010-01-01', NULL, TIMESTAMPTZ '2010-01-01 00:00:00+00')""")
+    con.execute("""CREATE TABLE screen_static AS SELECT * FROM (VALUES
+        (1, 'israel', 'pass', '', TIMESTAMPTZ '2010-01-01 00:00:00+00'),
+        (2, 'israel', 'fail', 'incorporated=L3', TIMESTAMPTZ '2010-01-01 00:00:00+00'),
+        (3, 'israel', 'pass', '', TIMESTAMPTZ '2010-01-01 00:00:00+00'))
+        t(cik, screen, status, reasons, knowable_at)""")
+    # company 3: compliant in 2019, debt pushes it out from Q1 2020 (known 2020-04-01)
+    con.execute("""CREATE TABLE screen_sharia_financial AS SELECT * FROM (VALUES
+        (1, DATE '2019-12-31', 'pass', TIMESTAMPTZ '2020-01-01 00:00:00+00'),
+        (2, DATE '2019-12-31', 'pass', TIMESTAMPTZ '2020-01-01 00:00:00+00'),
+        (3, DATE '2019-12-31', 'pass', TIMESTAMPTZ '2020-01-01 00:00:00+00'),
+        (3, DATE '2020-03-31', 'fail', TIMESTAMPTZ '2020-04-01 00:00:00+00'))
+        t(cik, as_of, status, knowable_at)""")
+    with AsOf(con, "2020-02-15") as db:
+        assert sorted(db.tradable()["cik"]) == [1, 3]      # Israeli company never tradable
+    with AsOf(con, "2020-04-15") as db:
+        assert sorted(db.tradable()["cik"]) == [1]         # ratio failure applies only once known

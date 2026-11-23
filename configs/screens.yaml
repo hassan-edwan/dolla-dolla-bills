@@ -1,0 +1,86 @@
+# Investment screens: the user does not invest in weapons makers, Israeli
+# companies, or companies that are not Sharia compliant.
+#
+# Screens restrict the TRADING universe only. Screened-out companies stay in
+# the database as training data (industry dynamics, failures, peers) unless
+# exclude_from_training is set to true.
+#
+# Status per (company, screen): pass | fail | review (needs a human/LLM check) | unknown (missing data)
+# A company is tradable at date t only if every screen is `pass` as of t.
+
+exclude_from_training: false
+
+israel:
+  # EDGAR state/country code for Israel
+  edgar_code: L3
+  rule: "fail if incorporated in Israel OR business/mailing address in Israel"
+  # Companies headquartered in Israel whose SEC addresses are elsewhere, or
+  # other additions the user decides on. Format: TICKER: reason
+  manual_fail: {}
+
+weapons:
+  # Ordnance & accessories, small arms, ammunition, tanks
+  fail_sic: [3480, 3482, 3483, 3484, 3489, 3795]
+  # Guided missiles & space vehicles, propulsion, search/navigation (defense electronics),
+  # aircraft parts: mixed civilian/military, so flagged for review instead of auto-failed
+  review_sic: [3761, 3764, 3769, 3812, 3728]
+  fail_name_keywords: [ordnance, munitions, ammunition, firearms, "arms ", missile, armament]
+  review_name_keywords: [defense, defence, tactical, military]
+  # Department of Defense contract obligations (trailing 12 months, as published)
+  # as a share of revenue. Above this -> review.
+  dod_revenue_share_review: 0.10
+  # Known weapons manufacturers / major weapons-systems suppliers (business identity, not performance)
+  manual_fail:
+    LMT: "weapons systems prime (missiles, fighter jets)"
+    RTX: "missiles and defense systems (Raytheon)"
+    NOC: "weapons systems prime"
+    GD: "weapons systems, munitions, combat vehicles"
+    LHX: "defense electronics and weapons systems"
+    HII: "warships"
+    BA: "military aircraft and weapons (defense segment)"
+    TXT: "military aircraft and weapons systems"
+    LDOS: "defense systems integrator"
+    AVAV: "loitering munitions (Switchblade)"
+    KTOS: "military drones, hypersonic weapons"
+    AJRD: "missile propulsion (Aerojet Rocketdyne)"
+    BWXT: "naval nuclear propulsion for warships"
+    MRCY: "defense electronics for weapons systems"
+    CW: "defense systems"
+    AXON: "conducted energy weapons (TASER)"
+    SWBI: "firearms"
+    RGR: "firearms"
+    OLN: "ammunition (Winchester)"
+    ESLT: "Israeli defense prime (Elbit Systems)"
+    BYRN: "less-lethal weapons"
+    PLTR: "REVIEW: defense / military targeting software"
+
+sharia_business:
+  # Core business activities that are not permissible
+  fail_sic:
+    - [6000, 6099]   # banks and credit institutions (interest-based)
+    - [6110, 6199]   # credit, lending, finance services -> see review_sic for crypto miners
+    - [6300, 6411]   # conventional insurance
+    - [2080, 2085]   # alcoholic beverages
+    - [2111, 2141]   # tobacco
+    - [5813, 5813]   # drinking places
+    - [7993, 7993]   # gambling / coin-operated amusement
+    - [7011, 7011]   # hotels & casinos (review_name_keywords catch pure hotels)
+  # SEC codes many crypto miners/exchanges use ("finance services" 6199, brokers 6211)
+  review_sic: [6199, 6211, 6798]
+  fail_name_keywords: [bank, bancorp, bancshares, insurance, casino, gaming, brewing, brewery, distill, wine, spirits, tobacco, cannabis]
+
+sharia_financial:
+  # AAOIFI-style financial ratio screens, evaluated quarterly with only data
+  # known at that date. Market cap = as-traded close x shares outstanding,
+  # averaged over the trailing window (S&P Shariah uses 36 months, Dow Jones 24).
+  market_cap_window_months: 36
+  max_debt_to_market_cap: 0.30
+  max_cash_and_interest_securities_to_market_cap: 0.30
+  max_impermissible_income_share: 0.05      # interest income / revenue as the measurable proxy
+  min_months_of_price_history: 6
+
+# Open questions for the user (screens use the defaults until decided)
+decisions:
+  crypto: "Scholars differ on crypto. Default: crypto-industry companies go to `review`. Miners/exchanges with interest-based lending or heavy debt will also fail the ratio screens."
+  israel_scope: "Default: incorporated or headquartered in Israel. Broader options: significant operations/R&D in Israel, or published lists of companies operating in occupied territories."
+  weapons_scope: "Default: weapons makers fail; mixed civilian/military companies (launch, aerospace parts, defense software) are `review`."
