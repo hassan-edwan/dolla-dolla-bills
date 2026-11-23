@@ -263,11 +263,25 @@ def sharia_financial(con, cfg) -> pd.DataFrame:
     return wide[cols].rename(columns={"mcap_avg": "market_cap_avg"})
 
 
-def dod_share(con) -> pd.DataFrame:
+def weapons_spending_filter(ws: dict) -> str:
+    """SQL condition: a DoD transaction counts as weapons spending."""
+    conds = [f"psc LIKE '{p}%' AND length(psc) = 4 AND regexp_matches(psc, '^[0-9]+$')" for p in ws["psc_prefixes"]]
+    conds += [f"psc = '{c}'" for c in ws["psc_codes"]]
+    conds += [f"psc LIKE '{p}%'" for p in ws["psc_rd_prefixes"]]
+    conds += [f"CAST(naics AS VARCHAR) = '{n}'" for n in ws["naics"]]
+    return "(" + " OR ".join(f"({c})" for c in conds) + ")"
+
+
+def dod_share(con, ws: dict) -> pd.DataFrame:
+    """Weapons-related DoD obligations per company-year as a share of revenue."""
+    cols = ["cik", "year", "weapons_obligations", "dod_obligations", "revenue", "share", "top_psc", "knowable_at"]
     try:
-        return con.execute("""
+        return con.execute(f"""
             WITH dod AS (
-                SELECT cik, year(action_date) AS year, sum(amount) AS dod_obligations
+                SELECT cik, year(action_date) AS year,
+                       sum(CASE WHEN {weapons_spending_filter(ws)} THEN amount ELSE 0 END) AS weapons_obligations,
+                       sum(amount) AS dod_obligations,
+                       arg_max(psc_description, CASE WHEN {weapons_spending_filter(ws)} THEN amount ELSE 0 END) AS top_psc
                 FROM gov_contracts WHERE agency ILIKE '%Department of Defense%' GROUP BY 1, 2
             ), rev AS (
                 SELECT cik, year(period_end) AS year, arg_max(value, knowable_at) AS revenue,
@@ -277,12 +291,14 @@ def dod_share(con) -> pd.DataFrame:
                   AND unit = 'USD' AND datediff('day', period_start, period_end) BETWEEN 350 AND 380
                 GROUP BY 1, 2
             )
-            SELECT d.cik, d.year, d.dod_obligations, r.revenue, d.dod_obligations / NULLIF(r.revenue, 0) AS share,
+            SELECT d.cik, d.year, d.weapons_obligations, d.dod_obligations, r.revenue,
+                   d.weapons_obligations / NULLIF(r.revenue, 0) AS share, d.top_psc,
                    greatest(r.rev_known, CAST(make_date(d.year, 12, 31) AS TIMESTAMPTZ) + INTERVAL 90 DAY) AS knowable_at
             FROM dod d JOIN rev r USING (cik, year)
         """).df()
-    except Exception:  # noqa: BLE001 - contracts not loaded yet
-        return pd.DataFrame(columns=["cik", "year", "dod_obligations", "revenue", "share", "knowable_at"])
+    except Exception as exc:  # noqa: BLE001 - contracts not loaded yet / no code columns
+        print("dod_share unavailable:", exc)
+        return pd.DataFrame(columns=cols)
 
 
 def build(db_path=DB_PATH) -> dict:
@@ -290,13 +306,15 @@ def build(db_path=DB_PATH) -> dict:
     cfg = yaml.safe_load((CONFIG_DIR / "screens.yaml").read_text())
     con = connect(db_path)
     st = static_screens(con, cfg)
-    dod = dod_share(con)
-    thr = cfg["weapons"]["dod_revenue_share_review"]
+    ws = cfg["weapons"]["weapons_spending"]
+    dod = dod_share(con, ws)
+    thr = ws["max_revenue_share"]
     heavy = dod[dod["share"] > thr]
     extra = []
     for cik, g in heavy.groupby("cik"):
         first = g.sort_values("year").iloc[0]
-        extra.append((cik, "weapons_dod", cfg["weapons"].get("gray_zone_status", "review"), f"DoD obligations {first['share']:.0%} of revenue in {int(first['year'])}",
+        extra.append((cik, "weapons_dod", cfg["weapons"].get("gray_zone_status", "review"), f"weapons-related DoD obligations {first['share']:.0%} of revenue in {int(first['year'])} "
+                      f"(largest: {str(first['top_psc'] or '').lower()})",
                       pd.Timestamp(first["knowable_at"]).tz_convert(None), first["knowable_at"]))
     if extra:
         st = pd.concat([st, pd.DataFrame(extra, columns=st.columns)], ignore_index=True)

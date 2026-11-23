@@ -20,6 +20,7 @@ Resumable: one Parquet file per company under data/db/gov_contracts/.
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 import json
 import time
 
@@ -36,7 +37,9 @@ DONE = OUT / "_done.json"
 API = "https://api.usaspending.gov/api/v2/search/spending_by_transaction/"
 FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "Action Date", "Transaction Amount",
           "Awarding Agency", "Awarding Sub Agency", "Transaction Description", "Mod",
-          "generated_internal_id"]
+          "generated_internal_id", "product_or_service_code", "product_or_service_description",
+          "naics_code", "naics_description"]
+DOD = {"type": "awarding", "tier": "toptier", "name": "Department of Defense"}
 PRIORITY = ["space", "nuclear", "quantum", "robotics_ai", "ev_battery", "energy", "tech",
             "crypto_adj", "gene_biotech"]
 MAX_PAGES = 40   # 4,000 transactions per company; flagged if hit
@@ -61,7 +64,7 @@ def recipient_matches(recipient: str, targets) -> bool:
     return any(rn == t or (" " in t and rn.startswith(t + " ")) for t in targets)
 
 
-def fetch_company(session, names: list[str]) -> tuple[pd.DataFrame, bool]:
+def fetch_company(session, names: list[str], dod_only: bool = False) -> tuple[pd.DataFrame, bool]:
     targets = {norm_name(n) for n in names if len(norm_name(n)) >= 4}
     if not targets:
         return pd.DataFrame(), False
@@ -69,10 +72,12 @@ def fetch_company(session, names: list[str]) -> tuple[pd.DataFrame, bool]:
     for search in sorted(targets):
         page = 1
         while True:
-            d = _post(session, {"filters": {"recipient_search_text": [search],
-                                            "award_type_codes": ["A", "B", "C", "D"],
-                                            "time_period": [{"start_date": "2007-10-01",
-                                                             "end_date": pd.Timestamp.now().strftime("%Y-%m-%d")}]},
+            filters = {"recipient_search_text": [search], "award_type_codes": ["A", "B", "C", "D"],
+                       "time_period": [{"start_date": "2007-10-01",
+                                        "end_date": pd.Timestamp.now().strftime("%Y-%m-%d")}]}
+            if dod_only:
+                filters["agencies"] = [DOD]
+            d = _post(session, {"filters": filters,
                                 "fields": FIELDS, "limit": 100, "page": page,
                                 "sort": "Action Date", "order": "asc"})
             if not d:
@@ -90,6 +95,73 @@ def fetch_company(session, names: list[str]) -> tuple[pd.DataFrame, bool]:
     df = pd.DataFrame(rows).drop_duplicates(subset=["generated_internal_id", "Mod", "Action Date",
                                                     "Transaction Amount"]) if rows else pd.DataFrame()
     return df, truncated
+
+
+def to_frame(cik: int, df: pd.DataFrame) -> pd.DataFrame:
+    g = lambda c: df[c] if c in df else None
+    out = pd.DataFrame({
+        "cik": cik,
+        "award_id": df["Award ID"], "award_key": df["generated_internal_id"], "mod": df["Mod"],
+        "recipient_name": df["Recipient Name"], "recipient_uei": g("Recipient UEI"),
+        "action_date": pd.to_datetime(df["Action Date"], errors="coerce"),
+        "amount": pd.to_numeric(df["Transaction Amount"], errors="coerce"),
+        "agency": df["Awarding Agency"], "sub_agency": df["Awarding Sub Agency"],
+        "description": df["Transaction Description"],
+        "psc": g("product_or_service_code"), "psc_description": g("product_or_service_description"),
+        "naics": g("naics_code"), "naics_description": g("naics_description"),
+    })
+    dod = out["agency"].fillna("").str.contains("Department of Defense", case=False)
+    lag = pd.to_timedelta(dod.map({True: 90, False: 5}), unit="D")
+    out["knowable_at"] = (out["action_date"] + lag).dt.tz_localize("UTC")
+    out["release_lag_days"] = lag.dt.days
+    return out
+
+
+def refresh_dod_codes(workers: int = 4) -> dict:
+    """Re-pull DoD transactions (with product/industry codes) for companies that have
+    DoD rows, and replace those rows in each company's file. Resumable."""
+    import glob
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    t0 = time.time()
+    marker = OUT / "_dod_codes_done.json"
+    done = set(json.loads(marker.read_text())) if marker.exists() else set()
+    con = connect(DB_PATH, read_only=True)
+    names = con.execute("""SELECT cik, list(DISTINCT name) AS names FROM company_names
+                           WHERE valid_to IS NULL OR valid_to >= DATE '2007-10-01' GROUP BY 1""").df()
+    con.close()
+    nm = dict(zip(names["cik"].astype(int), names["names"]))
+    todo = []
+    for f in glob.glob(str(OUT / "[0-9]*.parquet")):
+        cik = int(Path(f).stem)
+        if cik in done:
+            continue
+        cur = pd.read_parquet(f, columns=["agency"])
+        if cur["agency"].fillna("").str.contains("Department of Defense", case=False).any():
+            todo.append(cik)
+    local = threading.local()
+
+    def work(cik):
+        if not hasattr(local, "s"):
+            local.s = requests.Session()
+            local.s.headers["Content-Type"] = "application/json"
+        return cik, *fetch_company(local.s, list(nm.get(cik, [])), dod_only=True)
+
+    n = 0
+    with ThreadPoolExecutor(workers) as pool:
+        for k, (cik, df, truncated) in enumerate(pool.map(work, todo)):
+            path = OUT / f"{cik}.parquet"
+            cur = pd.read_parquet(path)
+            keep = cur[~cur["agency"].fillna("").str.contains("Department of Defense", case=False)]
+            new = to_frame(cik, df) if not df.empty else pd.DataFrame(columns=keep.columns)
+            pd.concat([keep, new], ignore_index=True).to_parquet(path, index=False)
+            done.add(cik)
+            n += len(new)
+            if k % 25 == 0 or k == len(todo) - 1:
+                marker.write_text(json.dumps(sorted(done)))
+                print(f"  {k + 1}/{len(todo)} companies, {n:,} DoD rows with codes, {time.time() - t0:.0f}s", flush=True)
+    marker.write_text(json.dumps(sorted(done)))
+    return {"companies": len(todo), "dod_rows": n, "seconds": round(time.time() - t0)}
 
 
 def build(db_path=DB_PATH, limit=None, workers: int = 4) -> dict:
@@ -126,19 +198,7 @@ def build(db_path=DB_PATH, limit=None, workers: int = 4) -> dict:
     pool = ThreadPoolExecutor(workers)
     for k, (r, df, truncated) in enumerate(pool.map(work, list(todo.itertuples(index=False)))):
         if not df.empty:
-            out = pd.DataFrame({
-                "cik": int(r.cik),
-                "award_id": df["Award ID"], "award_key": df["generated_internal_id"], "mod": df["Mod"],
-                "recipient_name": df["Recipient Name"], "recipient_uei": df.get("Recipient UEI"),
-                "action_date": pd.to_datetime(df["Action Date"], errors="coerce"),
-                "amount": pd.to_numeric(df["Transaction Amount"], errors="coerce"),
-                "agency": df["Awarding Agency"], "sub_agency": df["Awarding Sub Agency"],
-                "description": df["Transaction Description"],
-            })
-            dod = out["agency"].fillna("").str.contains("Department of Defense", case=False)
-            lag = pd.to_timedelta(dod.map({True: 90, False: 5}), unit="D")
-            out["knowable_at"] = (out["action_date"] + lag).dt.tz_localize("UTC")
-            out["release_lag_days"] = lag.dt.days
+            out = to_frame(int(r.cik), df)
             out.to_parquet(OUT / f"{int(r.cik)}.parquet", index=False)
             n_rows += len(out)
         done[str(int(r.cik))] = {"rows": int(len(df)), "truncated": truncated}
@@ -155,5 +215,6 @@ def build(db_path=DB_PATH, limit=None, workers: int = 4) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--refresh-dod-codes", action="store_true")
     a = ap.parse_args()
-    print(build(limit=a.limit))
+    print(refresh_dod_codes() if a.refresh_dod_codes else build(limit=a.limit))
