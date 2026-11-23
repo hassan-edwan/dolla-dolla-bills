@@ -29,10 +29,13 @@ def count(session, query: str, month: pd.Period) -> int | None:
     q = f"({query}) AND submittedDate:[{a} TO {b}]"
     for k in range(4):
         try:
-            r = session.get(API, params={"search_query": q, "max_results": 0}, timeout=60)
-            m = re.search(r"<opensearch:totalResults[^>]*>(\d+)<", r.text)
-            if m:
-                return int(m.group(1))
+            # max_results=0 can trigger server errors; an error page also reports
+            # totalResults=1, so detect it explicitly and retry.
+            r = session.get(API, params={"search_query": q, "max_results": 1}, timeout=60)
+            if r.status_code == 200 and "internal error" not in r.text and "<title>Error</title>" not in r.text:
+                m = re.search(r"<opensearch:totalResults[^>]*>(\d+)<", r.text)
+                if m:
+                    return int(m.group(1))
         except requests.RequestException:
             pass
         time.sleep(5 * (k + 1))

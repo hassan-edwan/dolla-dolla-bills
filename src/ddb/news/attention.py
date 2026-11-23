@@ -8,6 +8,7 @@ knowable_at = the day after the date (daily counts are published after the day e
 """
 from __future__ import annotations
 
+import hashlib
 import time
 from urllib.parse import quote, unquote
 
@@ -41,8 +42,11 @@ def cik_articles() -> pd.DataFrame:
 
 def pageviews(session, title: str) -> pd.DataFrame:
     end = (pd.Timestamp.now() - pd.Timedelta(days=1)).strftime("%Y%m%d")
-    for k in range(4):
+    for k in range(6):
         r = session.get(PV.format(title=quote(title, safe=""), end=end), timeout=60)
+        if r.status_code == 429:   # rate limited: honor Retry-After, else back off
+            time.sleep(float(r.headers.get("Retry-After") or 30 * (k + 1)))
+            continue
         if r.status_code == 200:
             items = r.json().get("items", [])
             return pd.DataFrame({"date": pd.to_datetime([i["timestamp"][:8] for i in items]),
@@ -66,20 +70,29 @@ def build(db_path=DB_PATH) -> dict:
     jobs += [("topic", None, ind, t) for ind, ts in topics.items() for t in ts]
     s = requests.Session()
     s.headers.update(HEADERS)
-    frames, n = [], 0
+    parts = OUT / "parts"
+    parts.mkdir(exist_ok=True)
+    n = 0
     for k, (kind, cik, ind, title) in enumerate(jobs):
+        part = parts / (hashlib.md5(f"{kind}|{cik}|{title}".encode()).hexdigest() + ".parquet")
+        if part.exists():
+            continue
         pv = pageviews(s, title)
-        if not pv.empty:
-            pv["entity_type"], pv["cik"], pv["industry"], pv["article"] = kind, cik, ind, title
-            frames.append(pv)
-            n += len(pv)
-        time.sleep(0.05)
-        if k % 250 == 0:
-            print(f"  {k + 1}/{len(jobs)} articles, {n:,} daily rows, {time.time() - t0:.0f}s", flush=True)
-    df = pd.concat(frames, ignore_index=True)
+        pv["entity_type"], pv["cik"], pv["industry"], pv["article"] = kind, cik, ind, title
+        pv["cik"] = pv["cik"].astype("Int64")
+        pv.to_parquet(part, index=False)       # checkpoint (empty frame = no article data)
+        n += len(pv)
+        time.sleep(3)                           # Wikimedia asks anonymous clients to go slowly
+        if k % 50 == 0:
+            print(f"  {k + 1}/{len(jobs)} articles, +{n:,} daily rows, {time.time() - t0:.0f}s", flush=True)
+    df = pd.concat([pd.read_parquet(f) for f in parts.glob("*.parquet")], ignore_index=True)
+    df = df[df["views"].notna()]
     df["cik"] = df["cik"].astype("Int64")
     df["knowable_at"] = (df["date"] + pd.Timedelta(days=1)).dt.tz_localize("UTC")
     df.to_parquet(OUT / "pageviews.parquet", index=False)
+    for f in parts.glob("*.parquet"):
+        f.unlink()
+    parts.rmdir()
     return {"company_articles": len(arts), "topic_articles": len(jobs) - len(arts), "rows": len(df),
             "seconds": round(time.time() - t0)}
 
