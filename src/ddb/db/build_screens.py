@@ -64,41 +64,52 @@ def static_screens(con, cfg) -> pd.DataFrame:
 
     man_w, man_i = manual("weapons"), manual("israel")
     w, sb, isr = cfg["weapons"], cfg["sharia_business"], cfg["israel"]
+    gray = w.get("gray_zone_status", "review")
     rows = []
     for r in comp.itertuples(index=False):
         all_names = list(r.names) if isinstance(r.names, (list, tuple)) or hasattr(r.names, "__len__") else [r.name]
         start = pd.Timestamp(r.first_filing).tz_localize("UTC") if pd.notna(r.first_filing) else None
         # Israel
         code = isr["edgar_code"]
-        hits = [f"{k}={v}" for k, v in (("incorporated", r.state_of_inc), ("business address", r.business_country_code),
-                                        ("mailing address", r.mailing_country_code)) if v == code]
-        if not hits and "ISRAEL" in str(r.business_city or "").upper():
-            hits.append(f"business city '{r.business_city}'")
+        hq = []
+        if r.business_country_code == code:
+            hq.append("business address in Israel")
+        elif "ISRAEL" in str(r.business_city or "").upper():
+            hq.append(f"business city '{r.business_city}'")
         if r.cik in man_i:
-            hits.append(man_i[r.cik])
-        rows.append((r.cik, "israel", "fail" if hits else "pass", "; ".join(hits)))
+            hq.append(man_i[r.cik])
+        if hq:
+            rows.append((r.cik, "israel", "fail", "HQ: " + "; ".join(hq)))
+        elif r.state_of_inc == code or r.mailing_country_code == code:
+            rows.append((r.cik, "israel", "review",
+                         "incorporated/mailing address in Israel, HQ elsewhere (user to confirm)"))
+        else:
+            rows.append((r.cik, "israel", "pass", ""))
         # Weapons
         reasons, status = [], "pass"
         if r.cik in man_w:
             txt = man_w[r.cik]
-            status = "review" if txt.startswith("REVIEW") else "fail"
-            reasons.append(txt)
+            status = gray if txt.startswith("REVIEW") else "fail"
+            reasons.append(txt.replace("REVIEW: ", "gray zone: "))
         if _in_ranges(r.sic, w["fail_sic"]):
             status, _ = "fail", reasons.append(f"SIC {r.sic}")
         elif _in_ranges(r.sic, w["review_sic"]) and status == "pass":
-            status, _ = "review", reasons.append(f"SIC {r.sic} (mixed civilian/military)")
+            status, _ = gray, reasons.append(f"SIC {r.sic} (mixed civilian/military, gray zone)")
         for n in all_names:
             f = _kw(n, w["fail_name_keywords"])
             if f:
                 status = "fail"
                 reasons.append(f"name '{n}': {f}")
             elif status == "pass" and _kw(n, w["review_name_keywords"]):
-                status = "review"
-                reasons.append(f"name '{n}'")
+                status = gray
+                reasons.append(f"name '{n}' (defense keyword, gray zone)")
         rows.append((r.cik, "weapons", status, "; ".join(reasons)))
         # Sharia business activity
         reasons, status = [], "pass"
-        if _in_ranges(r.sic, sb["fail_sic"]) and not _in_ranges(r.sic, [[x, x] for x in sb["review_sic"]]):
+        is_crypto = r.cik in crypto
+        if is_crypto and sb.get("crypto_allowed") and _in_ranges(r.sic, [[x, x] for x in sb["review_sic"]] + [[6110, 6199]]):
+            reasons.append(f"crypto company under finance SIC {r.sic}: allowed (ratio screens apply)")
+        elif _in_ranges(r.sic, sb["fail_sic"]) and not _in_ranges(r.sic, [[x, x] for x in sb["review_sic"]]):
             status = "fail"
             reasons.append(f"SIC {r.sic}")
         elif _in_ranges(r.sic, [[x, x] for x in sb["review_sic"]]):
@@ -109,9 +120,9 @@ def static_screens(con, cfg) -> pd.DataFrame:
             if f:
                 status = "fail"
                 reasons.append(f"name '{n}': {f}")
-        if r.cik in crypto and status == "pass":
+        if is_crypto and status == "pass" and not sb.get("crypto_allowed"):
             status = "review"
-            reasons.append("crypto industry (scholarly opinion differs; see screens.yaml decisions)")
+            reasons.append("crypto industry (not allowed by config)")
         rows.append((r.cik, "sharia_business", status, "; ".join(reasons)))
     df = pd.DataFrame(rows, columns=["cik", "screen", "status", "reasons"])
     df = df.merge(comp[["cik", "first_filing"]], on="cik")
@@ -125,9 +136,14 @@ DEBT = ["LongTermDebt", "LongTermDebtNoncurrent", "LongTermDebtCurrent", "DebtCu
         "ConvertibleNotesPayable", "ConvertibleNotesPayableCurrent", "NotesPayable", "CommercialPaper"]
 CASH = ["CashAndCashEquivalentsAtCarryingValue", "CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
         "ShortTermInvestments", "MarketableSecuritiesCurrent", "AvailableForSaleSecuritiesDebtSecuritiesCurrent"]
-INCOME = ["InvestmentIncomeInterest", "InvestmentIncomeInterestAndDividend", "InterestIncomeOther",
+INTEREST = ["InvestmentIncomeInterest", "InvestmentIncomeInterestAndDividend", "InterestIncomeOther",
+            "InterestAndDividendIncomeOperating", "InterestIncomeOperating", "InterestRevenueExpenseNet",
+            "InterestAndFeeIncomeLoansAndLeases", "InterestIncomeExpenseNet", "InterestAndOtherIncome",
+            "InterestRevenue"]
+INCOME = INTEREST + [
           "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet",
           "RevenueFromContractWithCustomerIncludingAssessedTax"]
+INCOME = list(dict.fromkeys(INCOME))
 SHARES = ["EntityCommonStockSharesOutstanding", "CommonStockSharesOutstanding",
           "WeightedAverageNumberOfDilutedSharesOutstanding"]
 # IFRS filers (20-F / 40-F)
@@ -155,18 +171,15 @@ def sharia_financial(con, cfg) -> pd.DataFrame:
     """)
     con.execute("UPDATE sf_grid SET as_of = last_day(as_of)")
     # Latest known value per concept at each as_of (instant items: newest period; income: last ~annual period)
-    con.execute("""
+    duration_list = ",".join(f"'{c}'" for c in INCOME + ["Revenue", "InterestRevenueCalculatedUsingEffectiveInterestMethod",
+                                                         "FinanceIncome", "WeightedAverageNumberOfDilutedSharesOutstanding"])
+    con.execute(f"""
         CREATE OR REPLACE TEMP TABLE sf_latest AS
         SELECT g.cik, g.as_of, f.concept, f.value
         FROM sf_grid g JOIN sf_facts f
           ON f.cik = g.cik AND f.knowable_at <= CAST(g.as_of AS TIMESTAMPTZ) + INTERVAL 1 DAY
          AND f.period_end >= g.as_of - INTERVAL 18 MONTH
-         AND (f.period_start IS NULL OR f.dur BETWEEN 350 AND 380 OR f.concept NOT IN
-              ('InvestmentIncomeInterest','InvestmentIncomeInterestAndDividend','InterestIncomeOther','Revenues',
-               'RevenueFromContractWithCustomerExcludingAssessedTax','SalesRevenueNet',
-               'RevenueFromContractWithCustomerIncludingAssessedTax','Revenue',
-               'InterestRevenueCalculatedUsingEffectiveInterestMethod','FinanceIncome',
-               'WeightedAverageNumberOfDilutedSharesOutstanding'))
+         AND (f.period_start IS NULL OR f.dur BETWEEN 350 AND 380 OR f.concept NOT IN ({duration_list}))
         QUALIFY row_number() OVER (PARTITION BY g.cik, g.as_of, f.concept
                                    ORDER BY f.period_end DESC, f.knowable_at DESC) = 1
     """)
@@ -182,9 +195,11 @@ def sharia_financial(con, cfg) -> pd.DataFrame:
     cash = g("CashAndCashEquivalentsAtCarryingValue").fillna(g("CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents")).fillna(g("CashAndCashEquivalents"))
     wide["cash_securities"] = cash + g("ShortTermInvestments").fillna(g("MarketableSecuritiesCurrent")).fillna(
         g("AvailableForSaleSecuritiesDebtSecuritiesCurrent")).fillna(g("CurrentInvestments")).fillna(0)
-    wide["interest_income"] = (g("InvestmentIncomeInterest").fillna(g("InvestmentIncomeInterestAndDividend"))
-                               .fillna(g("InterestIncomeOther")).fillna(g("InterestRevenueCalculatedUsingEffectiveInterestMethod"))
-                               .fillna(g("FinanceIncome")).fillna(0))
+    # Gross interest earned: take the largest of the interest-type concepts reported
+    # (companies tag it differently; a net-interest tag can understate gross interest).
+    cand = pd.concat([g(c).clip(lower=0) for c in INTEREST + ["InterestRevenueCalculatedUsingEffectiveInterestMethod",
+                                                                "FinanceIncome"]], axis=1)
+    wide["interest_income"] = cand.max(axis=1).fillna(0)
     wide["revenue"] = g("Revenues").fillna(g("RevenueFromContractWithCustomerExcludingAssessedTax")).fillna(
         g("SalesRevenueNet")).fillna(g("RevenueFromContractWithCustomerIncludingAssessedTax")).fillna(g("Revenue"))
     wide["shares"] = (g("EntityCommonStockSharesOutstanding").fillna(g("CommonStockSharesOutstanding"))
@@ -224,6 +239,9 @@ def sharia_financial(con, cfg) -> pd.DataFrame:
           & (wide["cash_ratio"] <= f["max_cash_and_interest_securities_to_market_cap"])
           & (wide["impermissible_share"].fillna(0) <= f["max_impermissible_income_share"]))
     known = wide["mcap_avg"].notna() & wide["cash_securities"].notna()
+    # Absurd ratios mean a data error (share-count units, mismatched ticker), not a real breach.
+    data_error = (wide["debt_ratio"] > 20) | (wide["cash_ratio"] > 20)
+    known = known & ~data_error
     wide["status"] = "unknown"
     wide.loc[known & ok, "status"] = "pass"
     wide.loc[known & ~ok, "status"] = "fail"
@@ -272,10 +290,17 @@ def build(db_path=DB_PATH) -> dict:
     extra = []
     for cik, g in heavy.groupby("cik"):
         first = g.sort_values("year").iloc[0]
-        extra.append((cik, "weapons_dod", "review", f"DoD obligations {first['share']:.0%} of revenue in {int(first['year'])}",
+        extra.append((cik, "weapons_dod", cfg["weapons"].get("gray_zone_status", "review"), f"DoD obligations {first['share']:.0%} of revenue in {int(first['year'])}",
                       pd.Timestamp(first["knowable_at"]).tz_convert(None), first["knowable_at"]))
     if extra:
         st = pd.concat([st, pd.DataFrame(extra, columns=st.columns)], ignore_index=True)
+    # Excluded on weapons grounds but still trained on and monitored for information
+    mon = st[st["screen"].str.startswith("weapons") & (st["status"] == "fail")][["cik", "screen", "reasons", "knowable_at"]]
+    mon = mon.assign(purpose="excluded from trading; monitored (contracts, filings, insider/politician trades) "
+                             "as information about suppliers, competitors and industry demand")
+    con.register("m", mon)
+    con.execute("CREATE OR REPLACE TABLE monitored_companies AS SELECT * FROM m")
+    con.unregister("m")
     fin = sharia_financial(con, cfg)
     for name, df in (("screen_static", st), ("screen_dod_share", dod), ("screen_sharia_financial", fin)):
         con.register("x", df)

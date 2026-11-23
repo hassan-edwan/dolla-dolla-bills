@@ -13,12 +13,21 @@ exclude_from_training: false
 israel:
   # EDGAR state/country code for Israel
   edgar_code: L3
-  rule: "fail if incorporated in Israel OR business/mailing address in Israel"
+  # User decision (2026-11-23): headquartered in Israel. HQ = SEC business
+  # address (or business city) in Israel -> fail. Incorporated in Israel but
+  # headquartered elsewhere -> review (not tradable until the user confirms).
+  rule: "fail if headquartered in Israel; review if only incorporated there"
   # Companies headquartered in Israel whose SEC addresses are elsewhere, or
   # other additions the user decides on. Format: TICKER: reason
   manual_fail: {}
 
 weapons:
+  # User decision (2026-11-23): the gray zone is excluded outright. Everything
+  # flagged `review` below (mixed civilian/military codes, defense keywords,
+  # DoD-revenue share, defense software) becomes `fail`. Excluded companies are
+  # still trained on and monitored for useful information (monitor_excluded).
+  gray_zone_status: fail
+  monitor_excluded: true
   # Ordnance & accessories, small arms, ammunition, tanks
   fail_sic: [3480, 3482, 3483, 3484, 3489, 3795]
   # Guided missiles & space vehicles, propulsion, search/navigation (defense electronics),
@@ -55,6 +64,10 @@ weapons:
     PLTR: "REVIEW: defense / military targeting software"
 
 sharia_business:
+  # User decision (2026-11-23): crypto is permissible. Crypto-industry companies
+  # pass the business screen (incl. those filed under finance codes 6199/6211);
+  # they must still pass the financial ratio screens.
+  crypto_allowed: true
   # Core business activities that are not permissible
   fail_sic:
     - [6000, 6099]   # banks and credit institutions (interest-based)
@@ -81,6 +94,6 @@ sharia_financial:
 
 # Open questions for the user (screens use the defaults until decided)
 decisions:
-  crypto: "Scholars differ on crypto. Default: crypto-industry companies go to `review`. Miners/exchanges with interest-based lending or heavy debt will also fail the ratio screens."
-  israel_scope: "Default: incorporated or headquartered in Israel. Broader options: significant operations/R&D in Israel, or published lists of companies operating in occupied territories."
-  weapons_scope: "Default: weapons makers fail; mixed civilian/military companies (launch, aerospace parts, defense software) are `review`."
+  crypto: "DECIDED 2026-11-23: allowed (ratio screens still apply)."
+  israel_scope: "DECIDED 2026-11-23: headquartered in Israel. Israeli-incorporated companies headquartered elsewhere are `review`."
+  weapons_scope: "DECIDED 2026-11-23: gray zone excluded outright; excluded companies are trained on and monitored."

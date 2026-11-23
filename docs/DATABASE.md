@@ -67,13 +67,26 @@ The user does not invest in **weapons makers**, **Israeli companies**, or
 companies that are **not Sharia compliant**. Rules are in `configs/screens.yaml`;
 the tables are built by `python -m ddb.db.build_screens`.
 
+Decisions recorded 2026-11-23: crypto allowed; Israel = headquartered there;
+the weapons gray zone is excluded outright but still trained on and monitored.
+
 | Screen | Rule | Dated? |
 |---|---|---|
-| `israel` | Fail if incorporated in Israel, or the SEC business/mailing address is in Israel (EDGAR code L3) | static |
-| `weapons` | Fail: ordnance/firearms/ammunition SIC codes, weapons keywords in any historical name, and a manual list of known weapons makers. Review: mixed civilian/military aerospace codes and defense keywords | static |
-| `weapons_dod` | Review once Department of Defense contract obligations exceed 10% of revenue in a year | yes (from the year it happens, after the 90-day DoD delay) |
-| `sharia_business` | Fail: interest-based finance, conventional insurance, alcohol, tobacco, gambling, cannabis. Review: crypto (scholars differ), brokers, REITs | static |
-| `sharia_financial` | AAOIFI-style ratios each quarter, using only data known then: debt / 36-month average market cap ≤ 30%; cash + interest-bearing securities / market cap ≤ 30%; interest income / total income ≤ 5%. Pre-revenue companies earning only interest → review. Missing data → unknown | yes (quarterly) |
+| `israel` | **Fail** if headquartered in Israel (SEC business address/city). **Review** if only incorporated or mailing address there (e.g. JFrog, Taboola, Stratasys); not tradable until confirmed | static |
+| `weapons` | **Fail**: weapons-industry SIC codes, weapons keywords in any historical name, known weapons makers, **and the gray zone** (mixed civilian/military aerospace codes, defense keywords, defense software such as Palantir) | static |
+| `weapons_dod` | **Fail** from the year Department of Defense contract obligations exceed 10% of revenue (after the 90-day DoD delay) | yes |
+| `sharia_business` | Fail: interest-based finance, conventional insurance, alcohol, tobacco, gambling, cannabis. **Crypto allowed**, including crypto companies filed under finance codes | static |
+| `sharia_financial` | AAOIFI-style ratios each quarter, using only data known then: debt / 36-month average market cap ≤ 30%; cash + interest-bearing securities ≤ 30%; gross interest income / total income ≤ 5%. Pre-revenue companies earning only interest → review. Ratios above 20× → `unknown` (data error). Missing data → unknown | yes (quarterly) |
+
+`monitored_companies`: weapons-excluded companies. Never traded, but their
+contracts, filings and insider/politician trades stay in training as
+information about suppliers, competitors and industry demand.
+
+Known limits:
+- Interest income reported under a company's own custom XBRL tags isn't seen.
+  Coinbase's stablecoin reserve income, for example, may be understated.
+- Companies with no structured financials (e.g. some 40-F filers like Cameco)
+  stay `unknown`, so they aren't tradable.
 
 `AsOf(t).tradable()` returns the companies that pass every screen as known at t.
 `review` and `unknown` are **not** tradable by default. Screened-out companies
