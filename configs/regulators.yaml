@@ -1,0 +1,27 @@
+# Federal Register agencies (slugs from federalregister.gov) -> industries they shape.
+# Rules, proposed rules and notices from these agencies are the regulatory
+# "news" for each industry: licensing, tariffs, export controls, tax credits.
+agencies:
+  nuclear-regulatory-commission:            [nuclear]
+  energy-department:                        [energy, nuclear, ev_battery, quantum]
+  federal-energy-regulatory-commission:     [energy]
+  environmental-protection-agency:          [energy, ev_battery]
+  interior-department:                      [energy, ev_battery]
+  land-management-bureau:                   [energy, ev_battery]
+  ocean-energy-management-bureau:           [energy]
+  safety-and-environmental-enforcement-bureau: [energy]
+  pipeline-and-hazardous-materials-safety-administration: [energy]
+  federal-aviation-administration:          [space, robotics_ai]
+  federal-communications-commission:        [space, tech]
+  national-aeronautics-and-space-administration: [space]
+  industry-and-security-bureau:             [tech, quantum, space, robotics_ai]   # export controls
+  national-institute-of-standards-and-technology: [quantum, tech, robotics_ai]
+  international-trade-administration:       [energy, tech, ev_battery]           # anti-dumping (solar)
+  international-trade-commission:           [energy, tech, ev_battery]
+  trade-representative-office-of-united-states: [tech, ev_battery, energy]       # tariffs
+  securities-and-exchange-commission:       [crypto_adj]
+  commodity-futures-trading-commission:     [crypto_adj, energy]
+  internal-revenue-service:                 [energy, ev_battery]                 # IRA tax credits
+  national-highway-traffic-safety-administration: [ev_battery, robotics_ai]
+  food-and-drug-administration:             [gene_biotech]
+  defense-department:                       [space, robotics_ai, tech]

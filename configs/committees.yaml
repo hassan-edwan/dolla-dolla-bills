@@ -1,0 +1,33 @@
+# Which congressional committees oversee which industries.
+# Keys are thomas_id codes from unitedstates/congress-legislators. Subcommittees
+# inherit their parent committee's industries unless listed separately.
+# Used to flag trades and policy activity by members with oversight of an industry.
+
+committees:
+  # ---------------- House
+  HSIF: {name: "Energy and Commerce", industries: [energy, nuclear, tech, gene_biotech, ev_battery, crypto_adj]}
+  HSAS: {name: "Armed Services", industries: [space, robotics_ai, quantum, nuclear, tech]}
+  HSSY: {name: "Science, Space, and Technology", industries: [space, quantum, robotics_ai, nuclear, energy, tech]}
+  HSBA: {name: "Financial Services", industries: [crypto_adj, tech]}
+  HSAG: {name: "Agriculture (CFTC oversight)", industries: [crypto_adj, energy]}
+  HSII: {name: "Natural Resources", industries: [energy, nuclear, ev_battery]}
+  HSPW: {name: "Transportation and Infrastructure", industries: [ev_battery, energy, robotics_ai]}
+  HSHM: {name: "Homeland Security", industries: [tech, space, quantum]}
+  HLIG: {name: "Permanent Select Committee on Intelligence", industries: [tech, quantum, space]}
+  HSAP: {name: "Appropriations", industries: [space, nuclear, energy, tech, quantum, robotics_ai, gene_biotech]}
+  HSWM: {name: "Ways and Means (tax credits)", industries: [energy, ev_battery, gene_biotech]}
+  HSFA: {name: "Foreign Affairs (export controls)", industries: [tech, quantum]}
+  HSZS: {name: "Select Committee on the CCP", industries: [tech, ev_battery, quantum, crypto_adj]}
+  # ---------------- Senate
+  SSEG: {name: "Energy and Natural Resources", industries: [energy, nuclear, ev_battery]}
+  SSAS: {name: "Armed Services", industries: [space, robotics_ai, quantum, nuclear, tech]}
+  SSCM: {name: "Commerce, Science, and Transportation", industries: [space, tech, ev_battery, quantum, robotics_ai]}
+  SSBK: {name: "Banking, Housing, and Urban Affairs", industries: [crypto_adj, tech]}
+  SSAF: {name: "Agriculture, Nutrition, and Forestry (CFTC)", industries: [crypto_adj, energy]}
+  SSEV: {name: "Environment and Public Works (NRC oversight)", industries: [nuclear, energy, ev_battery]}
+  SSHR: {name: "Health, Education, Labor, and Pensions", industries: [gene_biotech]}
+  SSFI: {name: "Finance (tax credits)", industries: [energy, ev_battery, gene_biotech]}
+  SLIN: {name: "Select Committee on Intelligence", industries: [tech, quantum, space]}
+  SSAP: {name: "Appropriations", industries: [space, nuclear, energy, tech, quantum, robotics_ai, gene_biotech]}
+  SSFR: {name: "Foreign Relations (export controls)", industries: [tech, quantum]}
+  SSHG: {name: "Homeland Security and Governmental Affairs", industries: [tech, quantum]}

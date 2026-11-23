@@ -29,10 +29,12 @@ OUT = DATA_DIR / "db" / "politician_trades"
 INDEX = "https://disclosures-clerk.house.gov/public_disc/financial-pdfs/{y}FD.zip"
 PTR = "https://disclosures-clerk.house.gov/public_disc/ptr-pdfs/{y}/{doc}.pdf"
 
+# Older PDFs render in small caps, so pdftotext yields mixed case ("apple Inc. (aaPl)"):
+# match case-insensitively and upper-case the ticker afterwards.
 LINE = re.compile(
-    r"^\s*(?P<owner>SP|JT|DC)?\s+(?P<asset>.+?)\s*\((?P<ticker>[A-Z][A-Z0-9.\-]{0,6})\)\s*"
-    r"(?:\[(?P<atype>[A-Z]{2})\])?\s+(?P<type>P|S \(partial\)|S|E)\s+"
-    r"(?P<tdate>\d{2}/\d{2}/\d{4})\s+(?P<ndate>\d{2}/\d{2}/\d{4})\s+(?P<amt>.+?)\s*$")
+    r"^\s*(?P<owner>SP|JT|DC)?\s+(?P<asset>.+?)\s*\((?P<ticker>[A-Za-z][A-Za-z0-9.\-]{0,6})\)\s*"
+    r"(?:\[(?P<atype>[A-Za-z]{2})\])?\s+(?P<type>P|S \(partial\)|S|E)\s+"
+    r"(?P<tdate>\d{1,2}/\d{1,2}/\d{4})\s+(?P<ndate>\d{1,2}/\d{1,2}/\d{4})\s+(?P<amt>.+?)\s*$", re.I)
 AMOUNT = re.compile(r"\$([\d,]+)")
 
 
@@ -51,14 +53,14 @@ def parse_ptr_text(text: str) -> list[dict]:
         nums = [int(x.replace(",", "")) for x in AMOUNT.findall(amt)]
         atype = m.group("atype")
         if atype is None and i + 1 < len(lines):
-            mm = re.search(r"\[([A-Z]{2})\]", lines[i + 1])
+            mm = re.search(r"\[([A-Za-z]{2})\]", lines[i + 1])
             atype = mm.group(1) if mm else None
         out.append({
-            "owner": m.group("owner") or "self",
+            "owner": (m.group("owner") or "self").upper() if m.group("owner") else "self",
             "asset_name": m.group("asset").strip(),
-            "ticker": m.group("ticker"),
-            "asset_type": atype,
-            "transaction_type": {"P": "buy", "S": "sell", "S (partial)": "sell_partial", "E": "exchange"}[m.group("type")],
+            "ticker": m.group("ticker").upper(),
+            "asset_type": atype.upper() if atype else None,
+            "transaction_type": {"P": "buy", "S": "sell", "S (PARTIAL)": "sell_partial", "E": "exchange"}[m.group("type").upper()],
             "trans_date": pd.to_datetime(m.group("tdate"), format="%m/%d/%Y", errors="coerce"),
             "notification_date": pd.to_datetime(m.group("ndate"), format="%m/%d/%Y", errors="coerce"),
             "amount_min": nums[0] if nums else None,
@@ -126,8 +128,106 @@ def build(years=(2012, 2026)) -> dict:
     return stats
 
 
+# ---------------------------------------------------------------- Senate (eFD)
+SENATE = "https://efdsearch.senate.gov"
+AMT_TYPES = {"Purchase": "buy", "Sale (Full)": "sell", "Sale (Partial)": "sell_partial",
+             "Sale": "sell", "Exchange": "exchange"}
+
+
+def _senate_session():
+    """The user approved accepting eFD's access agreement for personal research use."""
+    import requests
+    s = requests.Session()
+    s.headers["User-Agent"] = "Mozilla/5.0"
+    home = s.get(f"{SENATE}/search/home/", timeout=60).text
+    tok = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', home).group(1)
+    s.post(f"{SENATE}/search/home/", data={"prohibition_agreement": "1", "csrfmiddlewaretoken": tok},
+           headers={"Referer": f"{SENATE}/search/home/"}, timeout=60)
+    return s
+
+
+def _senate_reports(s, start="01/01/2012 00:00:00"):
+    end = pd.Timestamp.now().strftime("%m/%d/%Y 23:59:59")
+    out, offset = [], 0
+    while True:
+        csrf = s.cookies.get("csrftoken")
+        d = s.post(f"{SENATE}/search/report/data/", timeout=60,
+                   headers={"Referer": f"{SENATE}/search/", "X-CSRFToken": csrf},
+                   data={"start": str(offset), "length": "100", "report_types": "[11]", "filer_types": "[]",
+                         "submitted_start_date": start, "submitted_end_date": end, "candidate_state": "",
+                         "senator_state": "", "office_id": "", "first_name": "", "last_name": "",
+                         "csrfmiddlewaretoken": csrf}).json()
+        for first, last, full, link, filed in d["data"]:
+            href = re.search(r'href="([^"]+)"', link).group(1)
+            out.append({"member": f"{first} {last}".strip(), "filer": full, "href": href,
+                        "filing_date": pd.to_datetime(filed, format="%m/%d/%Y", errors="coerce")})
+        offset += 100
+        if offset >= d["recordsTotal"]:
+            return pd.DataFrame(out)
+        time.sleep(0.5)
+
+
+def parse_senate_table(html: str) -> list[dict]:
+    tbody = re.search(r"<tbody>(.*?)</tbody>", html, re.S)
+    if not tbody:
+        return []
+    rows = []
+    for tr in re.findall(r"<tr.*?>(.*?)</tr>", tbody.group(1), re.S):
+        cells = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", c)).strip()
+                 for c in re.findall(r"<td.*?>(.*?)</td>", tr, re.S)]
+        if len(cells) < 8:
+            continue
+        _, tdate, owner, ticker, asset, atype, ttype, amt = cells[:8]
+        nums = [int(x.replace(",", "")) for x in AMOUNT.findall(amt)]
+        rows.append({"owner": owner.lower() or "self", "asset_name": asset,
+                     "ticker": ticker if ticker not in ("--", "") else None, "asset_type": atype,
+                     "transaction_type": AMT_TYPES.get(ttype, ttype.lower()),
+                     "trans_date": pd.to_datetime(tdate, format="%m/%d/%Y", errors="coerce"),
+                     "notification_date": pd.NaT,
+                     "amount_min": nums[0] if nums else None, "amount_max": nums[1] if len(nums) > 1 else None})
+    return rows
+
+
+def build_senate() -> dict:
+    t0 = time.time()
+    s = _senate_session()
+    reports = _senate_reports(s)
+    raw = DATA_DIR / "raw" / "senate"
+    raw.mkdir(parents=True, exist_ok=True)
+    rows, stats = [], {"reports": len(reports), "electronic": 0, "paper_needs_ocr": 0, "trades": 0}
+    for k, r in enumerate(reports.itertuples(index=False)):
+        if "/paper/" in r.href:
+            stats["paper_needs_ocr"] += 1
+            continue
+        cache = raw / (r.href.strip("/").split("/")[-1] + ".html")
+        if not cache.exists():
+            resp = s.get(SENATE + r.href, timeout=60)
+            if "prohibition_agreement" in resp.text:     # session expired: re-accept
+                s = _senate_session()
+                resp = s.get(SENATE + r.href, timeout=60)
+            cache.write_text(resp.text)
+            time.sleep(0.5)
+        stats["electronic"] += 1
+        for t in parse_senate_table(cache.read_text()):
+            rows.append({**t, "chamber": "senate", "member": r.member, "state_district": None,
+                         "doc_id": r.href.strip("/").split("/")[-1], "filing_date": r.filing_date,
+                         "knowable_at": (r.filing_date + pd.Timedelta(days=1)).tz_localize("UTC"),
+                         "disclosure_lag_days": (r.filing_date - t["trans_date"]).days if pd.notna(t["trans_date"]) else None,
+                         "source_url": SENATE + r.href})
+        if k % 200 == 0:
+            print(f"  senate {k + 1}/{len(reports)} trades={len(rows):,} {time.time() - t0:.0f}s", flush=True)
+    df = pd.DataFrame(rows)
+    OUT.mkdir(parents=True, exist_ok=True)
+    if not df.empty:
+        df.to_parquet(OUT / "senate_all.parquet", index=False)
+    stats["trades"] = len(df)
+    stats["seconds"] = round(time.time() - t0)
+    return stats
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", nargs=2, type=int, default=[2012, 2026])
+    ap.add_argument("--senate", action="store_true", help="Senate only")
     a = ap.parse_args()
-    print(build(tuple(a.years)))
+    print(build_senate() if a.senate else build(tuple(a.years)))
