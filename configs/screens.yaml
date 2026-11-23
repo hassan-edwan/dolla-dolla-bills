@@ -97,5 +97,5 @@ sharia_financial:
 # Open questions for the user (screens use the defaults until decided)
 decisions:
   crypto: "DECIDED 2026-11-23: allowed (ratio screens still apply)."
-  israel_scope: "DECIDED 2026-11-23: headquartered in Israel. Israeli-incorporated companies headquartered elsewhere are `review`."
+  israel_scope: "DECIDED 2026-11-23: headquartered in Israel; Israeli-incorporated companies headquartered elsewhere are also excluded."
   weapons_scope: "DECIDED 2026-11-23: gray zone excluded outright; excluded companies are trained on and monitored."

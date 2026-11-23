@@ -53,7 +53,7 @@ class AsOf:
         return False
 
     # -- convenience ----------------------------------------------------
-    def universe(self, industries=None, active_months: int = 18) -> pd.DataFrame:
+    def universe(self, industries=None, active_months: int = 18, include_low_confidence: bool = False) -> pd.DataFrame:
         """Companies tagged to the industries at time t AND still active then
         (filed something with the SEC in the prior `active_months`), using only
         what was known at t."""
@@ -66,6 +66,7 @@ class AsOf:
             SELECT DISTINCT ci.cik, ci.industry, ci.sub_industry, ci.method, ci.confidence
             FROM company_industries ci
             WHERE ci.valid_from <= DATE '{d}' AND (ci.valid_to IS NULL OR ci.valid_to > DATE '{d}') {where}
+              {"" if include_low_confidence else "AND ci.confidence <> 'low'"}
               AND ci.cik IN (SELECT cik FROM filings
                              WHERE filing_date >= DATE '{d}' - INTERVAL {int(active_months)} MONTH)
         """)

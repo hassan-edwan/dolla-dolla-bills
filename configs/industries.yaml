@@ -50,7 +50,7 @@ industries:
 
 # Keyword rules that are too broad on their own (e.g. "space" matches "Space
 # Storage Inc") are tagged with confidence=low and queued for verification.
-low_confidence_keywords: [exploration, energy, space, bio, "motors ", "hash ", "btc ", "ai ", "ev ", " gene ", launch, charging, aerospace, pharma, autonomous]
+low_confidence_keywords: [rocket, satellite, orbital, exploration, energy, space, bio, "motors ", "hash ", "btc ", "ai ", "ev ", " gene ", launch, charging, aerospace, pharma, autonomous]
 
 # Operating-company filter: must have filed at least one of these.
 annual_report_forms: ["10-K", "10-K405", "10-KSB", "20-F", "40-F"]

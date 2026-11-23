@@ -147,3 +147,18 @@ def test_gdelt_filter_keeps_company_and_signal_articles(tmp_path, monkeypatch):
     assert [r["url"] for r in rows] == ["u1", "u2"]
     assert rows[0]["ciks"] == [1274494] and rows[1]["signals"] == ["bottleneck"]
     assert str(rows[0]["knowable_at"]) == "2024-01-02 03:30:00+00:00"   # file time + 15 min
+
+
+def test_decision_log_rejects_evidence_from_the_future(tmp_path):
+    import duckdb
+    from ddb.decisions import DecisionLog, Factor, HindsightError
+    con = duckdb.connect(str(tmp_path / "d.duckdb"))
+    log = DecisionLog(con)
+    run = log.new_run("test-model")
+    ok = Factor("momentum", 1.2, value=0.4, knowable_at=pd.Timestamp("2024-01-31 21:00", tz="UTC"))
+    log.record(run, "2024-01-31 21:30", 1, "AAA", "buy", target_weight=0.1, factors=[ok])
+    late = Factor("next quarter revenue", 0.5, knowable_at=pd.Timestamp("2024-02-15", tz="UTC"))
+    with pytest.raises(HindsightError):
+        log.record(run, "2024-01-31 21:30", 1, "AAA", "buy", target_weight=0.1, factors=[late])
+    log.flush()
+    assert con.execute("SELECT count(*) FROM decisions").fetchone()[0] == 1

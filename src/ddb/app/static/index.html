@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Dashboard</title>
+<link rel="stylesheet" href="/static/styles.css">
+<!--SNAPSHOT_DATA-->
+</head>
+<body>
+<header class="top">
+  <h1>dolla-dolla-bills</h1>
+  <nav class="tabs" role="tablist">
+    <button data-tab="overview" aria-selected="true">Overview</button>
+    <button data-tab="universe">Universe &amp; screens</button>
+    <button data-tab="industry">Industries</button>
+    <button data-tab="company">Company</button>
+    <button data-tab="decisions">Model decisions</button>
+  </nav>
+  <div class="asof" title="Everything shown is limited to what was public at this moment">
+    <label for="asof-date">As of</label>
+    <input type="range" id="asof-range" min="0" max="100" step="1">
+    <input type="date" id="asof-date">
+    <label class="toggle" title="Show how listings ended (outcome labels). These are hindsight; a model never sees them as inputs.">
+      <input type="checkbox" id="hindsight"> hindsight labels
+    </label>
+    <button class="iconbtn" id="theme" title="Toggle light/dark">◐</button>
+  </div>
+</header>
+<main>
+  <div class="banner" id="banner"></div>
+  <section id="view"></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

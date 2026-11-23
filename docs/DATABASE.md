@@ -117,6 +117,7 @@ stay in the database as training data (`exclude_from_training: false`).
 | `filing_text_signals` | feature | filings containing bottleneck / development / stagnation phrases (EDGAR full-text search, 2001+). `knowable_at` = acceptance |
 | `wiki_pageviews` | feature | daily Wikipedia views for company and industry-topic articles. `knowable_at` = next day |
 | `research_velocity` | feature | arXiv papers per month per topic. `knowable_at` = month end + 1 day |
+| `decision_runs`, `decisions`, `decision_factors` | model output | every model decision with its factors, contributions and evidence (source + knowable_at); see `src/ddb/decisions.py` |
 | `politician_trades` | feature | congressional trades (opt-in, see `RESEARCH_TRACKS.md` #9). `knowable_at` = day after disclosure |
 | `outcomes` | **label** | how each company's listing ended: `rule` (from final filings) and `research` (web-verified) |
 | `research_notes` | provenance | every web-researched fact with source URL and confidence |

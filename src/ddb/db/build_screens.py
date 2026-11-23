@@ -213,8 +213,14 @@ def sharia_financial(con, cfg) -> pd.DataFrame:
             FROM prices p WHERE p.close_raw IS NOT NULL GROUP BY 1, 2, 3
         )
         SELECT COALESCE(m.pcik, t.cik) AS cik, m.month, avg(m.close_raw) AS close_raw
-        FROM m LEFT JOIN (SELECT DISTINCT upper(ticker) AS sym, cik FROM tickers
-                          WHERE source IN ('sec_current', 'research')) t
+        FROM m LEFT JOIN (
+                -- primary (common-stock) ticker: the first one the SEC lists; research
+                -- tickers only for companies with no current ticker (delisted)
+                SELECT upper(current_tickers[1]) AS sym, cik FROM companies WHERE len(current_tickers) > 0
+                UNION
+                SELECT DISTINCT upper(r.ticker), r.cik FROM tickers r JOIN companies c USING (cik)
+                WHERE r.source = 'research' AND len(c.current_tickers) = 0
+             ) t
           ON m.pcik IS NULL AND t.sym = m.sym
         WHERE COALESCE(m.pcik, t.cik) IS NOT NULL
         GROUP BY 1, 2
