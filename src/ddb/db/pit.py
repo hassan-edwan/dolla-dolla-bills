@@ -53,17 +53,21 @@ class AsOf:
         return False
 
     # -- convenience ----------------------------------------------------
-    def universe(self, industries=None) -> pd.DataFrame:
-        """Companies tagged to the industries at time t, using only what was known then."""
+    def universe(self, industries=None, active_months: int = 18) -> pd.DataFrame:
+        """Companies tagged to the industries at time t AND still active then
+        (filed something with the SEC in the prior `active_months`), using only
+        what was known at t."""
         d = self.t.date().isoformat()
         where = ""
         if industries:
             inds = ",".join(f"'{i}'" for i in industries)
-            where = f"AND industry IN ({inds})"
+            where = f"AND ci.industry IN ({inds})"
         return self.query(f"""
-            SELECT DISTINCT cik, industry, sub_industry, method, confidence
-            FROM company_industries
-            WHERE valid_from <= DATE '{d}' AND (valid_to IS NULL OR valid_to > DATE '{d}') {where}
+            SELECT DISTINCT ci.cik, ci.industry, ci.sub_industry, ci.method, ci.confidence
+            FROM company_industries ci
+            WHERE ci.valid_from <= DATE '{d}' AND (ci.valid_to IS NULL OR ci.valid_to > DATE '{d}') {where}
+              AND ci.cik IN (SELECT cik FROM filings
+                             WHERE filing_date >= DATE '{d}' - INTERVAL {int(active_months)} MONTH)
         """)
 
     def tradable(self, industries=None, allow_review: bool = False) -> pd.DataFrame:

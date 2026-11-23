@@ -93,6 +93,9 @@ def test_tradable_applies_screens_point_in_time(tmp_path):
         (2, 'israel', 'fail', 'incorporated=L3', TIMESTAMPTZ '2010-01-01 00:00:00+00'),
         (3, 'israel', 'pass', '', TIMESTAMPTZ '2010-01-01 00:00:00+00'))
         t(cik, screen, status, reasons, knowable_at)""")
+    for cik in (1, 2, 3):   # active filers (universe requires recent filings)
+        con.execute(f"""INSERT INTO filings (cik, accession, form, filing_date, knowable_at)
+                        VALUES ({cik}, 'a{cik}', '10-Q', DATE '2019-11-01', TIMESTAMPTZ '2019-11-01 21:00:00+00')""")
     # company 3: compliant in 2019, debt pushes it out from Q1 2020 (known 2020-04-01)
     con.execute("""CREATE TABLE screen_sharia_financial AS SELECT * FROM (VALUES
         (1, DATE '2019-12-31', 'pass', TIMESTAMPTZ '2020-01-01 00:00:00+00'),
@@ -104,3 +107,15 @@ def test_tradable_applies_screens_point_in_time(tmp_path):
         assert sorted(db.tradable()["cik"]) == [1, 3]      # Israeli company never tradable
     with AsOf(con, "2020-04-15") as db:
         assert sorted(db.tradable()["cik"]) == [1]         # ratio failure applies only once known
+
+
+def test_universe_drops_companies_that_stopped_filing(tmp_path):
+    con = connect(tmp_path / "u.duckdb")
+    con.execute("""INSERT INTO company_industries VALUES
+        (1, 'tech', 'semis', 'sic', '3674', 'high', DATE '2010-01-01', NULL, TIMESTAMPTZ '2010-01-01 00:00:00+00')""")
+    con.execute("""INSERT INTO filings (cik, accession, form, filing_date, knowable_at)
+                   VALUES (1, 'a1', '10-K', DATE '2015-03-01', TIMESTAMPTZ '2015-03-01 21:00:00+00')""")
+    with AsOf(con, "2015-12-31") as db:
+        assert list(db.universe()["cik"]) == [1]
+    with AsOf(con, "2018-12-31") as db:
+        assert db.universe().empty          # no filings for 18+ months -> gone
