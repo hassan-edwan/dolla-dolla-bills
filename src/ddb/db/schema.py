@@ -167,7 +167,8 @@ CREATE TABLE IF NOT EXISTS research_queue (
 FEATURE_TABLES = ["company_names", "company_industries", "tickers", "filings", "events",
                   "fundamentals", "prices", "corporate_actions", "macro",
                   "insider_transactions", "politician_trades", "gov_contracts",
-                  "committee_seats", "news_events", "regulatory_documents"]
+                  "committee_seats", "news_events", "regulatory_documents",
+                  "filing_text_signals", "wiki_pageviews", "research_velocity"]
 LABEL_TABLES = ["outcomes"]
 
 
@@ -223,7 +224,8 @@ def connect(path, read_only: bool = False):
                         f"read_parquet('{d.as_posix()}/*.parquet', union_by_name=true)")
     # Other Parquet-backed feature tables (one directory each).
     for name in ("insider_transactions", "politician_trades", "gov_contracts",
-                 "news_events", "regulatory_documents"):
+                 "news_events", "regulatory_documents", "filing_text_signals",
+                 "wiki_pageviews", "research_velocity"):
         d = path.parent / "db" / name
         if d.exists() and any(d.glob("*.parquet")):
             con.execute(f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM "

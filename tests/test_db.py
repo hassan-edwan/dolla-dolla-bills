@@ -119,3 +119,31 @@ def test_universe_drops_companies_that_stopped_filing(tmp_path):
         assert list(db.universe()["cik"]) == [1]
     with AsOf(con, "2018-12-31") as db:
         assert db.universe().empty          # no filings for 18+ months -> gone
+
+
+def test_gdelt_filter_keeps_company_and_signal_articles(tmp_path, monkeypatch):
+    import io, zipfile
+    from ddb.news import gdelt
+    cols = [""] * 27
+    def line(date, url, themes, orgs, tone="1.5,2,1"):
+        f = list(cols); f[0], f[1], f[3], f[4] = "id", date, "example.com", url
+        f[7], f[13], f[15] = themes, orgs, tone
+        return "\t".join(f)
+    text = "\n".join([
+        line("20240102030000", "u1", "ENV_SOLAR;", "first solar;reuters"),          # names a company
+        line("20240102030000", "u2", "ENV_NUCLEARPOWER;SHORTAGE;", "doe"),          # industry + bottleneck
+        line("20240102030000", "u3", "ENV_NUCLEARPOWER;", "doe"),                   # industry only -> dropped
+        line("20240102030000", "u4", "SPORTS;", "constellation"),                   # common word, not aliased
+    ]) + "\n"
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("x.gkg.csv", text)
+    class R:
+        status_code, content = 200, buf.getvalue()
+    class S:
+        def get(self, *a, **k): return R()
+    theme_ind, theme_sig = gdelt._load_cfg()
+    rows = gdelt.process_file("20240102031500", S(), {"first solar": 1274494}, theme_ind, theme_sig)
+    assert [r["url"] for r in rows] == ["u1", "u2"]
+    assert rows[0]["ciks"] == [1274494] and rows[1]["signals"] == ["bottleneck"]
+    assert str(rows[0]["knowable_at"]) == "2024-01-02 03:30:00+00:00"   # file time + 15 min

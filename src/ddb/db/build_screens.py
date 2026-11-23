@@ -81,8 +81,8 @@ def static_screens(con, cfg) -> pd.DataFrame:
         if hq:
             rows.append((r.cik, "israel", "fail", "HQ: " + "; ".join(hq)))
         elif r.state_of_inc == code or r.mailing_country_code == code:
-            rows.append((r.cik, "israel", "review",
-                         "incorporated/mailing address in Israel, HQ elsewhere (user to confirm)"))
+            rows.append((r.cik, "israel", isr.get("incorporated_only_status", "review"),
+                         "incorporated/mailing address in Israel, HQ listed elsewhere"))
         else:
             rows.append((r.cik, "israel", "pass", ""))
         # Weapons

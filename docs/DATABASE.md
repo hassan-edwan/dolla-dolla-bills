@@ -113,6 +113,10 @@ stay in the database as training data (`exclude_from_training: false`).
 | `committee_seats` | feature | dated committee seats from 2012 (git snapshots of congress-legislators) |
 | `committee_industries` | reference | committee → industries it oversees (`configs/committees.yaml`) |
 | `screen_static`, `screen_dod_share`, `screen_sharia_financial` | screens | investment screens (above) |
+| `news_events` | feature | GDELT articles naming a tracked company or carrying industry + signal themes; tone, source, URL. `knowable_at` = file time + 15 min |
+| `filing_text_signals` | feature | filings containing bottleneck / development / stagnation phrases (EDGAR full-text search, 2001+). `knowable_at` = acceptance |
+| `wiki_pageviews` | feature | daily Wikipedia views for company and industry-topic articles. `knowable_at` = next day |
+| `research_velocity` | feature | arXiv papers per month per topic. `knowable_at` = month end + 1 day |
 | `politician_trades` | feature | congressional trades (opt-in, see `RESEARCH_TRACKS.md` #9). `knowable_at` = day after disclosure |
 | `outcomes` | **label** | how each company's listing ended: `rule` (from final filings) and `research` (web-verified) |
 | `research_notes` | provenance | every web-researched fact with source URL and confidence |

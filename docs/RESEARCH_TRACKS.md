@@ -98,22 +98,34 @@ can influence a decision at t.
 - **Market and macro series.**
 - **Regulatory documents** (track 13).
 
-**Not yet tracked:** general news coverage.
+**Now tracked (news pipeline, `src/ddb/news/`, config `configs/news.yaml`):**
+- `news_events`: GDELT global news. Articles that name a tracked company
+  (8,001 exact-name aliases in `data/reference/gdelt_aliases.csv`) or that combine
+  an industry theme with a bottleneck/development/stagnation theme. About 12k
+  articles a day; the backfill runs newest-first. The full 2015+ history is
+  ~2.5TB of downloads, so it's best run on the HPC: `hpc/gdelt_backfill.sbatch`.
+- `filing_text_signals`: 32 bottleneck/development/stagnation phrases searched
+  in every 10-K/10-Q/8-K/20-F/S-1 since 2001 (EDGAR full-text search), per company.
+- `wiki_pageviews`: daily Wikipedia attention for ~985 company articles (CIK→article
+  via Wikidata) and ~30 industry-topic articles, 2015-07+.
+- `research_velocity`: arXiv papers per month for 10 topics (quantum, AI,
+  robotics, batteries, fusion, fission, solar, chips, space, crypto), 2007+.
+- `regulatory_documents`: Federal Register (366,857 documents).
 
 The plan, by what we want to predict:
 
 | Question | Signals | Free source | Status |
 |---|---|---|---|
-| **Where will bottlenecks arise?** | Supply constraints: "backlog", "lead times", "shortage", "allocation", "capacity constrained" language in 10-K/10-Q/8-K text, counted per industry over time | SEC filing text (LLM/keyword extraction, dated by acceptance) | 📋 |
+| **Where will bottlenecks arise?** | Supply constraints: "backlog", "lead times", "shortage", "allocation", "capacity constrained" language in 10-K/10-Q/8-K text, counted per industry over time | EDGAR full-text search (`filing_text_signals`) | 🔄 loading |
 | | Physical supply data: oil/gas inventories, refinery use, power demand, uranium and lithium prices and production | EIA open data (free key), USGS mineral commodity data, FRED commodity series | 📋 (EIA key needed) |
 | | Chip supply chain: monthly semiconductor sales, imports/exports of chips and equipment | SIA/WSTS releases, Census trade data | 📋 |
 | | Licensing queues: reactor license dockets, launch licenses, spectrum filings, grid interconnection queues | Federal Register (✅ loaded), NRC dockets, FCC filings, FERC | 🔄 |
 | | Trade friction: tariffs, anti-dumping on solar/batteries, export controls on AI chips/quantum | Federal Register (USTR, ITC, BIS, ITA) | ✅ data, features 📋 |
-| **Is the industry developing?** | Research velocity: papers per month (quantum, AI, batteries, fusion) | arXiv API | 📋 |
+| **Is the industry developing?** | Research velocity: papers per month (quantum, AI, batteries, fusion) | arXiv API (`research_velocity`) | 🔄 loading |
 | | Patent filings by company and industry | USPTO bulk data / PatentsView | 📋 |
 | | Government money flowing in: contracts and grants | USAspending (✅ loading) | 🔄 |
 | | New entrants: IPOs, SPAC deals and S-1 registrations per industry | SEC filings (✅ have them) | ✅ data, features 📋 |
-| | Media attention and tone per company/industry | GDELT 2.0 global news knowledge graph (15-minute files since 2015, ~600MB/day, so it needs a filtering pipeline) | 📋 |
+| | Media attention and tone per company/industry | GDELT (`news_events`) + Wikipedia pageviews (`wiki_pageviews`) | 🔄 loading |
 | | Search interest | Google Trends | 📋 |
 | **Is it stagnating?** | Rising late filings, going-concern warnings, delisting notices, dilution per industry | SEC events (✅) | ✅ data, features 📋 |
 | | Insider net selling across an industry | Form 4 (✅) | ✅ data, features 📋 |

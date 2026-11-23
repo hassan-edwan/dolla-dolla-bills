@@ -17,6 +17,8 @@ israel:
   # address (or business city) in Israel -> fail. Incorporated in Israel but
   # headquartered elsewhere -> review (not tradable until the user confirms).
   rule: "fail if headquartered in Israel; review if only incorporated there"
+  # User decision (2026-11-23, later): exclude the incorporated-only companies too.
+  incorporated_only_status: fail
   # Companies headquartered in Israel whose SEC addresses are elsewhere, or
   # other additions the user decides on. Format: TICKER: reason
   manual_fail: {}

@@ -1,0 +1,91 @@
+# News pipeline configuration.
+# Every item is usable from its PUBLICATION time (knowable_at), never the
+# period it describes.
+
+# 1. Phrases searched in SEC filing text (10-K, 10-Q, 8-K incl. press-release
+#    exhibits) via EDGAR full-text search, 2001+. Counted per company per filing.
+filing_phrases:
+  bottleneck:
+    - "supply constraints"
+    - "supply chain disruptions"
+    - "component shortages"
+    - "chip shortage"
+    - "extended lead times"
+    - "capacity constraints"
+    - "allocation of supply"
+    - "sole source supplier"
+    - "raw material shortages"
+    - "transformer shortage"
+    - "interconnection queue"
+    - "permitting delays"
+    - "export controls"
+    - "tariffs on"
+  development:
+    - "record backlog"
+    - "demand exceeds supply"
+    - "capacity expansion"
+    - "new manufacturing facility"
+    - "strategic partnership"
+    - "first commercial"
+    - "design win"
+    - "awarded a contract"
+    - "regulatory approval"
+  stagnation:
+    - "substantial doubt about our ability to continue as a going concern"
+    - "reduction in force"
+    - "restructuring plan"
+    - "goodwill impairment"
+    - "decline in demand"
+    - "excess inventory"
+    - "pricing pressure"
+    - "delayed customer orders"
+    - "suspended operations"
+
+# 2. Research velocity: arXiv submissions per month per topic (search query).
+arxiv_topics:
+  quantum:      "cat:quant-ph AND (abs:\"quantum computing\" OR abs:qubit OR abs:\"quantum computer\")"
+  ai:           "cat:cs.LG OR cat:cs.AI"
+  robotics:     "cat:cs.RO"
+  batteries:    "abs:\"solid-state battery\" OR abs:\"lithium-ion\" OR abs:\"sodium-ion\""
+  fusion:       "cat:physics.plasm-ph AND (abs:tokamak OR abs:fusion)"
+  nuclear_fission: "abs:\"small modular reactor\" OR abs:\"molten salt reactor\" OR abs:\"fast reactor\""
+  solar:        "abs:perovskite OR abs:\"photovoltaic\""
+  semiconductors: "abs:\"chiplet\" OR abs:\"advanced packaging\" OR abs:\"EUV lithography\""
+  space:        "abs:\"small satellite\" OR abs:\"reusable launch\" OR abs:\"satellite constellation\""
+  crypto:       "abs:blockchain OR abs:bitcoin"
+
+# 3. Attention: Wikipedia daily pageviews (2015-07+). Company articles come
+#    from Wikidata (SEC CIK property P5531). Industry topic articles below.
+wikipedia_topics:
+  quantum: [Quantum_computing, Qubit, Quantum_supremacy]
+  nuclear: [Small_modular_reactor, Nuclear_power, Uranium, Fusion_power]
+  space: [Reusable_launch_vehicle, Satellite_internet_constellation, Starlink]
+  ev_battery: [Electric_vehicle, Lithium-ion_battery, Solid-state_battery, Lithium]
+  energy: [Solar_power, Hydrogen_economy, Natural_gas, Petroleum, Energy_storage]
+  tech: [Graphics_processing_unit, Artificial_intelligence, Semiconductor, Data_center]
+  crypto_adj: [Bitcoin, Cryptocurrency, Bitcoin_network, Stablecoin]
+  robotics_ai: [Humanoid_robot, Self-driving_car, Industrial_robot]
+  gene_biotech: [CRISPR_gene_editing, Gene_therapy, MRNA_vaccine]
+
+# 4. GDELT global news knowledge graph (15-minute files since 2015-02-18).
+#    Articles are kept if they name a tracked company (exact org-name match)
+#    or carry an industry theme. knowable_at = crawl timestamp + 15 minutes.
+gdelt:
+  sample_every_n_files: 1          # 1 = every 15-minute file; 4 = hourly sample
+  # Codes verified against GDELT's LOOKUP-GKGTHEMES list.
+  themes:
+    energy: [ENV_OIL, ENV_NATURALGAS, ENV_SOLAR, ENV_WINDPOWER, ENV_HYDRO, ENV_GREEN, ENV_COAL, ENV_GEOTHERMAL,
+             ENV_BIOFUEL, ECON_OILPRICE, ECON_NATGASPRICE, ECON_ELECTRICALDEMAND, ECON_ELECTRICALGRID,
+             ECON_NEWPOWERPLANT, WB_525_RENEWABLE_ENERGY, WB_528_SOLAR_ENERGY, WB_549_OIL_AND_GAS_SYSTEMS]
+    nuclear: [ENV_NUCLEARPOWER, WB_509_NUCLEAR_ENERGY]
+    ev_battery: [ENV_METALS, ENV_MINING]
+    space: [WB_2120_SATELLITES]          # noisy (satellite imagery stories); company names are the clean signal
+    tech: [TECH_BIGDATA]                 # CYBER_ATTACK dropped: too noisy
+    robotics_ai: [TECH_AUTOMATION]
+    crypto_adj: [ECON_BITCOIN]
+  signal_themes:
+    bottleneck: [SHORTAGE, STRIKE, BLOCKADE, SANCTIONS, ECON_TRADE_DISPUTE, POWER_OUTAGE,
+                 ECON_ELECTRICALLOADSHEDDING, WB_2605_SUPPLY_CHAIN_ANALYSIS]
+    stagnation: [ECON_BANKRUPTCY, UNEMPLOYMENT, ECON_CUTOUTLOOK, ECON_PAY_CUTS, ECON_DEBT, ECON_BUBBLE]
+    development: [ECON_IPO, ECON_ENTREPRENEURSHIP, ECON_FOREIGNINVEST, ECON_SUBSIDIES, ECON_NEWPOWERPLANT,
+                  WB_376_INNOVATION_TECHNOLOGY_AND_ENTREPRENEURSHIP]
