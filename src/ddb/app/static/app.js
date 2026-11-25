@@ -2,11 +2,14 @@
  * Point-in-time rule: every row carries `k` (when it became public). The "as of"
  * control hides rows with k > as-of, so each view shows only what a model could
  * have known at that moment. Outcome labels appear only with "hindsight labels" on.
- * Works live (fetches /api/...) or as a static snapshot (window.DDB_SNAPSHOT).
+ * Works live (fetches /api/...), as a one-file snapshot (window.DDB_SNAPSHOT), or as a
+ * published page: core data inline + per-view JSON files under window.DDB_FILES.
  */
 (() => {
   "use strict";
   const SNAP = window.DDB_SNAPSHOT || null;
+  const FILES = window.DDB_FILES || null;   // base URL of per-view JSON files (published page)
+  const fileFor = path => path.slice(1).replace(/[^A-Za-z0-9/_-]/g, "_") + ".json";
   const MIN_DATE = "2010-01-01";
   const state = {
     tab: "overview", asOf: Date.now(), hindsight: false, industry: "nuclear",
@@ -23,7 +26,9 @@
   function get(path) {
     if (!cache.has(path)) {
       cache.set(path, SNAP
-        ? (path in SNAP ? Promise.resolve(SNAP[path]) : Promise.reject(new Error("Not included in this snapshot")))
+        ? (path in SNAP ? Promise.resolve(SNAP[path])
+           : FILES ? fetch(FILES + fileFor(path)).then(r => { if (!r.ok) throw new Error("Not included in this snapshot"); return r.json(); })
+           : Promise.reject(new Error("Not included in this snapshot")))
         : fetch("/api" + path).then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); }));
     }
     return cache.get(path);
@@ -154,7 +159,7 @@
     const d = new Date(state.asOf).toISOString().slice(0, 10);
     document.getElementById("banner").innerHTML =
       `Showing only information that was <strong>public by ${d}</strong>. Move the as-of control to see exactly what a model could see on any date.` +
-      (SNAP ? ` <span class="muted">Static snapshot built ${esc(SNAP._built || "")}; live app: <code>python -m ddb.app.api</code>.</span>` : "");
+      (SNAP ? ` <span class="muted">Snapshot of the database taken ${esc(SNAP._built || "")}.</span>` : "");
   }
 
   // ------------------------------------------------------------------ views
