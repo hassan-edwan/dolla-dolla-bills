@@ -26,7 +26,8 @@ PY = sys.executable
 
 # (name, command, required, in default run, what it needs)
 STEPS = [
-    ("download", [PY, "scripts/build_database.py", "--download"], True, False, "network: sec.gov (~3 GB)"),
+    # "--steps" with nothing after it: download only (without it, build_database.py also runs every step)
+    ("download", [PY, "scripts/build_database.py", "--download", "--steps"], True, False, "network: sec.gov (~3 GB)"),
     ("database", [PY, "scripts/build_database.py", "--steps", "companies", "fundamentals", "macro", "research", "prices"],
      True, True, "SEC bulk files, Yahoo, FRED"),
     ("alpaca", [PY, "scripts/build_database.py", "--steps", "alpaca"], False, True, "Alpaca key (delisted prices)"),
