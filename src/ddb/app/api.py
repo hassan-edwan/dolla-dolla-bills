@@ -162,6 +162,34 @@ def short_term_day(day: str):
         con.close()
 
 
+def _simple(fn, *a):
+    con = _con()
+    try:
+        return _json(fn(con, *a))
+    finally:
+        con.close()
+
+
+@app.get("/api/portfolio")
+def portfolio():
+    return _simple(Q.portfolio_overview)
+
+
+@app.get("/api/portfolio_month/{month}")
+def portfolio_month(month: str):
+    return _simple(Q.portfolio_month, month)
+
+
+@app.get("/api/market")
+def market():
+    return _simple(Q.market_overview)
+
+
+@app.get("/api/tracking")
+def tracking():
+    return _simple(Q.tracking_overview)
+
+
 @app.get("/api/runs")
 def runs():
     con = _con()

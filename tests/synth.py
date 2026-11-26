@@ -37,6 +37,7 @@ def make_db(root: Path, n: int = 60, start: str = "2016-01-04", end: str = "2020
         drift[t] = d
     mkt = rng.normal(0.0003, 0.01, T)
     eps = rng.normal(0, 0.022, (T, n))
+    mkt[T // 2 - 40:T // 2] -= 0.006                 # a market sell-off during the stress episode
     r = drift + mkt[:, None] + eps
     r[1:] -= 0.12 * eps[:-1]                       # next-day reversal
     offer_days = {}
@@ -113,6 +114,23 @@ def make_db(root: Path, n: int = 60, start: str = "2016-01-04", end: str = "2020
     (root / "db" / "news_events").mkdir(exist_ok=True)
     pd.DataFrame(nw).to_parquet(root / "db" / "news_events" / "n.parquet", index=False)
 
+    # 13F: 200 filers; each company held by a drifting number of them
+    hold, filers = [], []
+    q_list = pd.date_range(pd.Timestamp(start) - pd.DateOffset(months=6), end, freq="QE")
+    base = rng.integers(20, 120, n).astype(float)
+    for q in q_list:
+        k = (q + pd.Timedelta(days=40)).tz_localize("UTC")
+        base = np.clip(base + rng.normal(0, 6, n), 3, 199)
+        for f_ in range(200):
+            filers.append({"filer_cik": 9000 + f_, "period": q.date(), "knowable_at": k})
+        for j, cik in enumerate(ciks):
+            for f_ in rng.choice(200, int(base[j]), replace=False):
+                hold.append({"cik": int(cik), "filer_cik": 9000 + int(f_), "period": q.date(), "shares": float(rng.integers(1e4, 1e6)),
+                             "value": 1.0, "accession": f"a{q.date()}-{f_}", "knowable_at": k})
+    for name, rows_ in (("inst_holdings", hold), ("inst_filers", filers)):
+        (root / "db" / name).mkdir(exist_ok=True)
+        pd.DataFrame(rows_).to_parquet(root / "db" / name / "x.parquet", index=False)
+
     con = connect(root / "ddb.duckdb")
     comp = pd.DataFrame({"cik": ciks, "name": [f"Synthetic {s} Corp" for s in syms], "sic": 3674,
                          "current_tickers": [[s] for s in syms], "is_current_listed": True,
@@ -149,6 +167,18 @@ def make_db(root: Path, n: int = 60, start: str = "2016-01-04", end: str = "2020
                    1e8 AS debt, 1e8 AS cash_securities, 1e6 AS interest_income, 1e8 AS revenue, 0.1 AS debt_ratio,
                    0.1 AS cash_ratio, 0.01 AS impermissible_share, 'pass' AS status,
                    TIMESTAMPTZ '2016-01-01 00:00:00+00' AS knowable_at FROM ci""")
+    # macro: calm, with a stress episode in the middle of the sample
+    mid = T // 2
+    stress = np.exp(-((np.arange(T) - mid) / 30.0) ** 2)
+    mac = []
+    for sid, base, amp in (("VIXCLS", 15, 30), ("BAMLH0A0HYM2", 3.5, 4), ("T10Y2Y", 1.0, -1.2),
+                           ("DGS10", 2.5, -0.5), ("DGS3MO", 1.5, 1.0)):
+        vals = base + amp * stress + rng.normal(0, 0.05 * abs(base), T)
+        mac.append(pd.DataFrame({"series": sid, "date": days.date, "value": vals, "source": "fred",
+                                 "knowable_at": (days + pd.Timedelta(days=1)).tz_localize("UTC")}))
+    mac = pd.concat(mac)
+    con.register("mac", mac)
+    con.execute("INSERT INTO macro SELECT * FROM mac")
     con.execute("CREATE TABLE IF NOT EXISTS filing_text_signals (cik BIGINT, phrase VARCHAR, signal VARCHAR, "
                 "file_date DATE, form VARCHAR, accession VARCHAR, document VARCHAR, knowable_at TIMESTAMPTZ)")
     con.execute("CREATE TABLE IF NOT EXISTS politician_trades (ticker VARCHAR, transaction_type VARCHAR, knowable_at TIMESTAMPTZ)")

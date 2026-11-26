@@ -269,6 +269,22 @@ signals:
     prior: 'works, short leg: avoid'
     role: avoid
     question: speculation
+  inst_breadth_chg:
+    family: alternative
+    sign: 1
+    label: Institutional breadth change
+    desc: Change in the number of 13F funds holding the stock last quarter, per 13F filer
+    prior: rising breadth predicts higher returns (Chen-Hong-Stein 2002); weaker recently
+    role: pick
+    question: flows
+  inst_own:
+    family: alternative
+    sign: 1
+    label: Institutional ownership
+    desc: Shares held by 13F funds / shares outstanding
+    prior: low-ownership stocks are neglected and riskier; mixed as a predictor
+    role: context
+    question: flows
 
 # The questions the dashboard asks before a long position. Signals are grouped
 # under these instead of by data source. kind: good = high is favorable;

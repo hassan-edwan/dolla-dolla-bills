@@ -122,6 +122,8 @@ def build(timeframes: list[str] | None = None) -> dict:
             latest.append(pd.read_parquet(files[-1], columns=["t"])["t"].max())
     end = max(latest).tz_convert("America/New_York").tz_localize(None).normalize()
     min_dv = cfg["min_dollar_volume_20d"]
+    from ..db.build_spreads import align, load_measured
+    spreads = load_measured()
     results = {}
     for tf in timeframes or list(cfg["timeframes"]):
         t0 = time.time()
@@ -141,7 +143,9 @@ def build(timeframes: list[str] | None = None) -> dict:
             feats = B.intraday_features(o, h, l, c, v, tcfg["short"], tcfg["long"])
             dv = B.session_dollar_volume(c, v)
             mask = (c >= cfg["liquidity"]["min_price"]) & (dv >= min_dv)
-            cost = B.round_trip_cost(dv, tiers, open_mult, entry_at_open=False)  # entries are never at the session open (targets stay in-session)
+            measured = align(spreads, c.index, c.columns)
+            cost = B.round_trip_cost(dv, tiers, open_mult, entry_at_open=False,   # entries are never at the session open
+                                     measured_half_bps=measured)
             fwd = {hn: B.forward_intraday(o, c, hv) for hn, hv in horizons.items()}
             keep = (c.index >= p.start_time) & (c.index <= p.end_time)
             every = int(tcfg.get("validate_every", 1))

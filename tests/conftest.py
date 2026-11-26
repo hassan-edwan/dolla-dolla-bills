@@ -22,3 +22,42 @@ def make_prices(closes: dict[str, list[float]], start="2024-01-02", volume=1e7, 
 @pytest.fixture
 def flat_prices():
     return make_prices({"AAA": [100.0] * 30, "BBB": [50.0] * 30})
+
+
+@pytest.fixture(scope="session")
+def synth(tmp_path_factory):
+    """Synthetic database with every pipeline built once: monthly panel + validation,
+    daily short-term, regime, model portfolio and tracking. Yields (root, db path)."""
+    import os
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).parent))
+    from synth import make_db
+    from ddb.app import queries as Q
+    from ddb.features import daily, panel, regime, validate
+    from ddb.live import tracking
+    from ddb.portfolio import model
+    root = tmp_path_factory.mktemp("synth")
+    db = make_db(root, n=40, start="2016-01-04", end="2019-12-31")
+    sig = root / "db" / "signals"
+    saved = {(panel, "OUT"): sig, (validate, "SIG_DIR"): sig, (daily, "OUT"): sig / "daily", (Q, "SIG"): sig.as_posix(),
+             (regime, "OUT"): root / "db" / "regime", (regime, "SIG"): sig, (model, "OUT"): root / "db" / "portfolio",
+             (model, "SIG"): sig, (model, "REGIME"): root / "db" / "regime" / "regime.parquet",
+             (tracking, "OUT"): root / "db" / "live", (tracking, "SIG"): sig}
+    old = {k: getattr(*k) for k in saved}
+    for (mod, name), v in saved.items():
+        setattr(mod, name, v)
+    cwd = os.getcwd()
+    os.chdir(root)
+    try:
+        panel.build("2016-01", db_path=db)
+        validate.build()
+        daily.build(db_path=db)
+        regime.build(db_path=db)
+        model.build(db_path=db)
+        tracking.build(db_path=db)
+        yield root, db
+    finally:
+        os.chdir(cwd)
+        for (mod, name), v in old.items():
+            setattr(mod, name, v)

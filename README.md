@@ -36,15 +36,22 @@ export DDB_SEC_USER_AGENT="dolla-dolla-bills your-email@example.com"   # SEC req
 .venv/bin/python scripts/export_dashboard.py # one-file snapshot -> data/results/dashboard.html
 ```
 
-Signals and short-term data points come first (each step reads the database):
+Build order after the database (each step reads the database; all free data):
 
 ```bash
-.venv/bin/python -m ddb.features.panel      # monthly signal panel
-.venv/bin/python -m ddb.features.validate   # monthly tests + walk-forward composite
-.venv/bin/python -m ddb.features.daily      # next-day / 5-day data points, tested after costs
-# optional, intraday (free Alpaca key; ~1 minute per symbol-year of 1-minute bars):
-.venv/bin/python -m ddb.db.build_intraday --max-symbols 100
-.venv/bin/python -m ddb.features.intraday   # 1/5/15-minute and hourly data points, tested after costs
+.venv/bin/python -m ddb.db.build_13f          # institutional holdings (SEC 13F data sets), optional
+.venv/bin/python -m ddb.features.panel         # monthly signal panel
+.venv/bin/python -m ddb.features.validate      # monthly tests + walk-forward composite
+.venv/bin/python -m ddb.features.daily         # next-day / 5-day data points, tested after costs
+.venv/bin/python -m ddb.db.build_macro         # FRED: VIX, credit spreads, yields
+.venv/bin/python -m ddb.features.regime        # market regime, daily
+.venv/bin/python -m ddb.portfolio.model        # model portfolio: sizes, risk, backtest after costs and tax
+.venv/bin/python -m ddb.live.tracking          # forecast log, signal decay, data freshness (run after every update)
+# optional, needs a free Alpaca key:
+.venv/bin/python -m ddb.db.build_intraday --max-symbols 100   # 1-minute bars (~1 minute per symbol-year)
+.venv/bin/python -m ddb.features.intraday      # minute/hour data points, tested after costs
+.venv/bin/python -m ddb.db.build_spreads       # measured bid-ask spreads (replace the tier estimate in costs)
+.venv/bin/python -m ddb.live.execution         # paper-trading fills vs the cost model
 ```
 
 Every view has an **as-of date**: it shows only information that was public by
@@ -62,6 +69,15 @@ data source:
   and news spikes), each data point's edge **after trading costs**, daily range for
   stops, and the intraday (minute/hour) results. If the short-term composite does
   not beat costs, the page says so.
+- **Portfolio:** what the model would hold: position sizes (by volatility, with caps
+  per name, industry and group of names that move together, scaled to a volatility
+  target), cash, expected volatility, beta, effective number of independent bets,
+  correlated groups, industry and style exposure, expected return before and after
+  costs and tax, upcoming earnings, and the backtest's drawdown vs the "model broken"
+  line (`docs/RISK.md`).
+- **Market:** the regime (calm / caution / stress) from VIX, credit spreads, the
+  yield curve, trend and breadth, momentum-crash risk, and how the model has done in
+  each regime. A one-line regime and data-health summary sits on every page.
 - **Company:** the monthly verdict by question and the short-term picture first,
   then the evidence: price, events, Sharia ratios, financials, insiders, Congress,
   contracts, news, filings language.
@@ -72,8 +88,9 @@ data source:
   Decisions whose evidence postdates the decision cannot be recorded
   (`ddb.decisions.DecisionLog`).
 - **Model lab:** how every monthly, daily and intraday data point was tested
-  (scorecards, IC over time, quintiles, costs, time of day), universe & screens,
-  data sources.
+  (scorecards, IC over time, quintiles, costs, time of day); track record (live
+  forecast log, walk-forward record, signal decay); execution quality (fills vs
+  the cost model); data health; universe & screens; data sources.
 
 "Hindsight labels" (how a listing ended) are hidden unless switched on.
 
@@ -89,7 +106,10 @@ data source:
 | `src/ddb/metrics.py` | Rolling 18-month return distribution and drawdown metrics |
 | `src/ddb/db/` | Company database builders, point-in-time API (`pit.py`), screens |
 | `configs/short_term.yaml` | Daily and intraday data points, horizons, bar sizes, intraday download scope |
-| `src/ddb/features/` | Monthly panel + validation; `bars.py` (bar features, after-cost tests), `daily.py`, `intraday.py` |
+| `src/ddb/features/` | Monthly panel + validation; `bars.py` (bar features, after-cost tests), `daily.py`, `intraday.py`, `regime.py`, `calendar.py` (expected earnings dates) |
+| `configs/risk.yaml` | Regime thresholds, portfolio sizing, decay and freshness alerts |
+| `src/ddb/portfolio/` | Sizing and risk (`sizing.py`), model portfolio + backtest (`model.py`) |
+| `src/ddb/live/` | Forecast log, signal decay, data freshness (`tracking.py`); fills vs cost model (`execution.py`) |
 | `src/ddb/news/` | News pipeline: GDELT, filing-text signals, Wikipedia attention, arXiv |
 | `src/ddb/app/` | Dashboard: API (`api.py`), queries, static frontend |
 | `src/ddb/decisions.py` | Decision record format every model must write (explainability + no-hindsight check) |

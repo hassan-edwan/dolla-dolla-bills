@@ -70,6 +70,23 @@ companies. Each bar's `knowable_at` is its end (start + 1 minute). Past years ar
 skipped when present, so the job resumes after a stop. At 200 requests/minute,
 one symbol-year takes about a minute. Scope and bar sizes: `configs/short_term.yaml`.
 
+## Institutional holdings (13F)
+
+`python -m ddb.db.build_13f` reads the SEC's quarterly Form 13F data sets (2013+):
+original 13F-HR reports only, share positions only (no options or bonds). Issuers
+are matched to companies by name (a normalized name must identify exactly one
+company), then by 6-character CUSIP prefix. A holding is public the day after its
+filing date. Tables: `inst_holdings` (cik, filer, period, shares) and `inst_filers`
+(every 13F filer per period). They feed `inst_breadth_chg` and `inst_own`.
+
+## Measured spreads
+
+`python -m ddb.db.build_spreads` samples Alpaca quotes (3 days x 3 one-minute
+windows a month per symbol) and stores the median quoted spread per symbol-month in
+`data/db/spreads/`. A month's value is used from the next month on, for at most 100
+days; it replaces the liquidity-tier estimate in every cost calculation (backtests
+and after-cost tests).
+
 ## Investment screens (what may be traded)
 
 The user does not invest in **weapons makers**, **Israeli companies**, or

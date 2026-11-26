@@ -146,29 +146,6 @@ def test_intraday_settlement_counts_trading_days():
 
 
 # ------------------------------------------------------------------ end to end on a synthetic database
-@pytest.fixture(scope="module")
-def synth(tmp_path_factory):
-    from synth import make_db
-    from ddb.app import queries as Q
-    from ddb.features import daily, panel, validate
-    root = tmp_path_factory.mktemp("synth")
-    db = make_db(root, n=40, start="2016-01-04", end="2019-12-31")
-    sig = root / "db" / "signals"
-    old = (panel.OUT, validate.SIG_DIR, daily.OUT, Q.SIG)
-    panel.OUT, validate.SIG_DIR, daily.OUT, Q.SIG = sig, sig, sig / "daily", sig.as_posix()
-    import os
-    cwd = os.getcwd()
-    os.chdir(root)
-    try:
-        panel.build("2016-01", db_path=db)
-        validate.build()
-        daily.build(db_path=db)
-        yield root, db
-    finally:
-        os.chdir(cwd)
-        panel.OUT, validate.SIG_DIR, daily.OUT, Q.SIG = old
-
-
 def test_daily_pipeline_finds_planted_effects(synth):
     root, _ = synth
     v = json.loads((root / "db" / "signals" / "daily" / "validation.json").read_text())

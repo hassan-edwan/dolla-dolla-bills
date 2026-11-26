@@ -446,6 +446,7 @@ def signal_month(con, month: str, limit: int = 250) -> dict:
     names = _q(con, "SELECT cik, name, current_tickers[1] AS ticker FROM companies")
     sc = sc.merge(names, on="cik", how="left")
     label = {s: c.get("label", s) for s, c in scfg.items()}
+    earn = _earnings(con, t, sc["cik"].astype(int).tolist())
     rows = []
     for r in sc.sort_values("composite", ascending=False).to_dict(orient="records"):
         cik = int(r["cik"])
@@ -476,7 +477,8 @@ def signal_month(con, month: str, limit: int = 250) -> dict:
                      "drivers": drivers, "drags": drags, "change": change,
                      "pct": {s: (None if pd.isna(r.get(f"{s}__pct")) else round(float(r[f"{s}__pct"]), 1))
                              for s in [x["signal"] for x in v.get("signals", [])] if f"{s}__pct" in r},
-                     "price": r.get("price_raw"), "dollar_vol": r.get("dollar_vol_20d"), "mcap": r.get("mcap")})
+                     "price": r.get("price_raw"), "dollar_vol": r.get("dollar_vol_20d"), "mcap": r.get("mcap"),
+                     "earnings": earn.get(cik)})
     trad_rows = [x for x in rows if x["tradable"]]
     # names that were top-20% last month and fell out (or left the tradable universe)
     now = {x["cik"]: x for x in trad_rows}
@@ -540,6 +542,82 @@ def _alerts(r: dict) -> list[dict]:
     if (g("wiki_spike") or 0) >= math.log(3):
         a.append({"signal": "wiki_spike", "text": "attention spike", "tone": "info"})
     return a
+
+
+def _earnings(con, t, ciks) -> dict:
+    """cik -> expected next results date (estimated from the company's own history, as of t)."""
+    from ..features.calendar import expected_earnings, trading_days_between
+    try:
+        e = expected_earnings(con, t, ciks)
+    except Exception:  # noqa: BLE001
+        return {}
+    t0 = pd.Timestamp(t).tz_localize(None) if pd.Timestamp(t).tzinfo else pd.Timestamp(t)
+    return {int(r.cik): {"next": str(r.next_expected)[:10], "last": str(r.last_report)[:10], "overdue": bool(r.overdue),
+                         "days": int(r.days_to), "trading_days": trading_days_between(t0, r.next_expected), "method": r.method}
+            for r in e.itertuples()}
+
+
+# ------------------------------------------------------------------ portfolio, market, tracking
+def portfolio_overview(con) -> dict:
+    """Backtest summary, equity/drawdown/halt line, and the month-ends with a snapshot."""
+    s = _read_json(f"{SIG}/../portfolio/summary.json")
+    if not s:
+        return {}
+    eq = _q(con, f"SELECT * FROM read_parquet('{SIG}/../portfolio/equity.parquet') ORDER BY d")
+    eq["d"] = pd.to_datetime(eq["d"])
+    w = eq.set_index("d").resample("W").last().dropna(subset=["equity"])
+    series = [{"d": str(i)[:10], "k": (i + pd.Timedelta(hours=21, minutes=30)).isoformat() + "Z",
+               "equity": round(float(r.equity), 2), "benchmark": round(float(r.benchmark), 2),
+               "drawdown": round(float(r.drawdown), 4), "halt_line": None if pd.isna(r.halt_line) else round(float(r.halt_line), 4)}
+              for i, r in w.iterrows()]
+    snaps = _read_json(f"{SIG}/../portfolio/snapshots.json")
+    return {"summary": s, "equity": series, "months": sorted(snaps)}
+
+
+def portfolio_month(con, month: str) -> dict:
+    """The model portfolio at one month-end: holdings, sizes, risk, expected return, earnings."""
+    snaps = _read_json(f"{SIG}/../portfolio/snapshots.json")
+    sn = snaps.get(month[:10])
+    if not sn:
+        return {}
+    t = pd.Timestamp(month[:10]) + pd.Timedelta(hours=21, minutes=30)
+    earn = _earnings(con, t, [h["cik"] for h in sn["holdings"]])
+    warn = yaml.safe_load((CONFIG_DIR / "risk.yaml").read_text())["portfolio"]
+    for h in sn["holdings"]:
+        h["earnings"] = earn.get(h["cik"])
+        h["earnings_soon"] = bool(h["earnings"] and h["earnings"]["trading_days"] is not None
+                                  and h["earnings"]["trading_days"] <= warn["earnings_warning_days"])
+    sn["k"] = t.isoformat() + "Z"
+    sn["config"] = warn
+    return sn
+
+
+def market_overview(con) -> dict:
+    """Daily regime table (point in time) and how the model did in each regime."""
+    from pathlib import Path
+    f = Path(SIG).parent / "regime" / "regime.parquet"
+    if not f.exists():
+        return {}
+    r = _q(con, f"SELECT * FROM read_parquet('{f.as_posix()}') ORDER BY d")
+    cols = ["vix", "vix_pct", "hy_oas", "hy_chg_3m", "curve_10y2y", "curve_10y3m", "mkt_index", "mkt_trend", "breadth",
+            "mkt_vol", "mkt_ret_24m", "crash_state", "points", "regime", "reasons"]
+    rows = []
+    for x in r.to_dict(orient="records"):
+        d = pd.Timestamp(x["d"])
+        o = {"d": str(d)[:10], "k": (d + pd.Timedelta(hours=21, minutes=30)).isoformat() + "Z"}
+        for c in cols:
+            v = x.get(c)
+            o[c] = None if v is None or (isinstance(v, float) and not math.isfinite(v)) else (round(v, 4) if isinstance(v, float) else v)
+        o["crash_state"] = bool(o["crash_state"]) if o["crash_state"] is not None else None
+        rows.append(o)
+    return {"days": rows, "summary": _read_json((Path(SIG).parent / "regime" / "summary.json").as_posix())}
+
+
+def tracking_overview(con) -> dict:
+    from pathlib import Path
+    live = Path(SIG).parent / "live"
+    return {"tracking": _read_json((live / "tracking.json").as_posix()),
+            "execution": _read_json((live / "execution.json").as_posix())}
 
 
 def short_term_overview(con) -> dict:
@@ -608,10 +686,16 @@ def short_term_day(con, day: str, limit: int = 300) -> dict:
                                "flags": _flags(r, proven)} for r in mm.to_dict(orient="records")}
     cfg = _short_cfg()["daily"]["signals"]
     val = {s["signal"]: s for s in (_read_json(f"{SIG}/daily/validation.json").get("signals") or [])}
+    earn = _earnings(con, t, sc["cik"].astype(int).tolist())
+    warn = yaml.safe_load((CONFIG_DIR / "risk.yaml").read_text())["portfolio"]["earnings_warning_days"]
     keys = list(cfg)
     rows = []
     for r in sc.sort_values("composite", ascending=False, na_position="last").to_dict(orient="records"):
         al = _alerts(r)
+        e = earn.get(int(r["cik"]))
+        if e and e["trading_days"] is not None and e["trading_days"] <= warn:
+            al.append({"signal": None, "text": "earnings due now" if e["overdue"] or e["trading_days"] == 0
+                       else f"earnings in ~{e['trading_days']}d", "tone": "info"})
         for x in al:
             vv = val.get(x["signal"], {})
             x["status"], x["pays"] = vv.get("status"), vv.get("pays_after_costs")
@@ -620,10 +704,12 @@ def short_term_day(con, day: str, limit: int = 300) -> dict:
                      "composite_pct": None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1),
                      "values": {k: (None if pd.isna(r.get(k)) else float(r[k])) for k in keys},
                      "pct": {k: (None if pd.isna(r.get(f"{k}__pct")) else round(float(r[f"{k}__pct"]), 1)) for k in keys},
-                     "alerts": al, "avoid": any(x["tone"] == "bad" for x in al) or bool(m and m["flags"]),
+                     "alerts": al,   # avoid: a bad alert from a PROVEN data point, or a monthly red flag
+                     "avoid": any(x["tone"] == "bad" and x.get("status") in ("predictive", "moderate") for x in al)
+                     or bool(m and m["flags"]),
                      "monthly": m, "price": r.get("price_raw"), "dollar_vol": r.get("dollar_vol"),
                      "cost_bps": None if pd.isna(r.get("cost_rt")) else round(float(r["cost_rt"]) * 1e4, 1),
-                     "atr_pct": None if pd.isna(r.get("atr_pct")) else float(r["atr_pct"])})
+                     "atr_pct": None if pd.isna(r.get("atr_pct")) else float(r["atr_pct"]), "earnings": e})
     return {"day": d, "k": t.isoformat(), "universe_n": universe_n, "tradable_n": len(rows),
             "rows": _records(pd.DataFrame(rows))[:limit] if rows else []}
 

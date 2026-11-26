@@ -132,15 +132,20 @@ def forward_intraday(o: pd.DataFrame, c: pd.DataFrame, h) -> pd.DataFrame:
 
 # ------------------------------------------------------------------ costs
 def round_trip_cost(dollar_vol: pd.DataFrame, tiers, open_mult: float = 1.5,
-                    entry_at_open: np.ndarray | bool = True) -> pd.DataFrame:
-    """Fraction of price lost to spreads on a buy-then-sell, by liquidity tier (sim.yaml).
+                    entry_at_open: np.ndarray | bool = True, measured_half_bps: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Fraction of price lost to spreads on a buy-then-sell, by liquidity tier (sim.yaml),
+    or by the measured half-spread where one is known (ddb.db.build_spreads).
     The entry pays the wider opening spread when it fills at the session open."""
     tiers = sorted(([float(a), float(b)] for a, b in tiers), key=lambda t: -t[0])
     dv = dollar_vol.to_numpy()
     half = np.full(dv.shape, tiers[-1][1])
     for min_adv, bps in reversed(tiers):
         half = np.where(dv >= min_adv, bps, half)
-    half = np.where(np.isfinite(dv), half, np.nan) / 1e4
+    half = np.where(np.isfinite(dv), half, np.nan)
+    if measured_half_bps is not None and not measured_half_bps.empty:
+        m = measured_half_bps.reindex(index=dollar_vol.index, columns=dollar_vol.columns).to_numpy(dtype=float)
+        half = np.where(np.isfinite(m), m, half)
+    half = half / 1e4
     mult = np.where(np.asarray(entry_at_open, dtype=bool), open_mult, 1.0)
     if mult.ndim == 1:
         mult = mult[:, None]

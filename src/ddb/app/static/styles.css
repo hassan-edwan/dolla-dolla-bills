@@ -135,3 +135,5 @@ code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: va
 .q.risk-on { border-color: var(--critical); }
 details.bg > summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; margin: 14px 0 10px; }
 td.num { white-space: nowrap; }
+.strip { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.bar { display: inline-block; height: 8px; border-radius: 4px; background: var(--series-1); vertical-align: middle; max-width: 60px; }

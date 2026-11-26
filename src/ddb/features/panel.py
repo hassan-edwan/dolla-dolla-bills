@@ -117,6 +117,51 @@ def window_sum(grid: pd.DataFrame, events: pd.DataFrame, value_col: str | None, 
     return pd.Series(out, index=grid.index, name=name)
 
 
+def inst_features(con, grid: pd.DataFrame) -> pd.DataFrame:
+    """13F ownership at each month-end t (ddb.db.build_13f), point in time.
+
+    Q = the latest quarter-end whose 45-day filing deadline had passed by t, and only
+    filings public by t count.
+    - inst_breadth_chg: change in the number of 13F filers holding the stock from
+      the quarter before Q to Q, divided by the number of 13F filers in Q
+      (Chen, Hong and Stein 2002: rising breadth predicts higher returns);
+    - inst_own: shares held by 13F filers in Q / shares outstanding.
+    """
+    out = pd.DataFrame(index=grid.index, columns=["inst_breadth_chg", "inst_own", "inst_holders"], dtype=float)
+    try:
+        con.execute("SELECT 1 FROM inst_holdings LIMIT 1")
+    except Exception:  # noqa: BLE001 - 13F not loaded
+        return out
+    for d, g in grid.groupby("d"):
+        cut = pd.Timestamp(d) - pd.Timedelta(days=46)
+        q = (cut.to_period("Q") - (0 if cut == cut.to_period("Q").end_time.normalize() else 1)).end_time.normalize()
+        q0 = (q.to_period("Q") - 1).end_time.normalize()
+        t = (pd.Timestamp(d) + pd.Timedelta(hours=21, minutes=30)).tz_localize("UTC").isoformat()
+        h = con.execute(f"""
+            SELECT cik, CAST(period AS DATE) AS p, count(DISTINCT filer_cik) AS holders, sum(shares) AS shares
+            FROM inst_holdings
+            WHERE CAST(period AS DATE) IN (DATE '{q.date()}', DATE '{q0.date()}') AND shares > 0
+              AND knowable_at <= TIMESTAMPTZ '{t}'
+            GROUP BY 1, 2""").df()
+        if h.empty:
+            continue
+        nf, nf0 = con.execute(f"""SELECT count(DISTINCT filer_cik) FILTER (WHERE CAST(period AS DATE) = DATE '{q.date()}'),
+                                         count(DISTINCT filer_cik) FILTER (WHERE CAST(period AS DATE) = DATE '{q0.date()}')
+                                  FROM inst_filers WHERE knowable_at <= TIMESTAMPTZ '{t}'""").fetchone()
+        h["p"] = pd.to_datetime(h["p"])
+        now = h[h["p"] == q].set_index("cik")
+        before = h[h["p"] == q0].set_index("cik")
+        ciks = g["cik"]
+        hn = now["holders"].reindex(ciks).fillna(0).to_numpy()
+        hb = before["holders"].reindex(ciks).fillna(0).to_numpy()
+        has = (now["holders"].reindex(ciks).notna() | before["holders"].reindex(ciks).notna()).to_numpy()
+        out.loc[g.index, "inst_breadth_chg"] = np.where(has & ((nf or 0) > 0) & ((nf0 or 0) > 0), (hn - hb) / max(nf or 1, 1), np.nan)
+        out.loc[g.index, "inst_holders"] = np.where(has, hn, np.nan)
+        out.loc[g.index, "inst_own"] = now["shares"].reindex(ciks).to_numpy() / g["shares"].to_numpy()
+    out["inst_own"] = out["inst_own"].clip(upper=2.0)
+    return out
+
+
 # ------------------------------------------------------------------ build
 def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     t0 = time.time()
@@ -381,6 +426,10 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     except Exception as exc:  # noqa: BLE001
         print("short interest not loaded:", exc)
         grid["days_to_cover"] = grid["short_pct"] = np.nan
+
+    # ---- institutional ownership (13F), if loaded
+    print("institutional ownership ...", flush=True)
+    grid[["inst_breadth_chg", "inst_own", "inst_holders"]] = inst_features(con, grid)
 
     # industry momentum: equal-weight mean of mom_12_1 within industry at t
     grid["ind_mom"] = grid.groupby(["d", "industry"])["mom_12_1"].transform("mean")

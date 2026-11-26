@@ -46,6 +46,12 @@ def main():
     snap["/short_term"] = st
     for d in (st.get("daily", {}).get("days") or [])[-a.short_term_days:]:   # Today view for recent trading days
         snap[f"/short_term_day/{d}"] = Q.short_term_day(con, d)
+    po = Q.portfolio_overview(con)
+    snap["/portfolio"] = po
+    for m in (po.get("months") or [])[-36:]:
+        snap[f"/portfolio_month/{m}"] = Q.portfolio_month(con, m)
+    snap["/market"] = Q.market_overview(con)
+    snap["/tracking"] = Q.tracking_overview(con)
     runs = Q.runs(con)
     snap["/runs"] = runs
     dec_ciks = []
@@ -97,7 +103,7 @@ def main():
     print(f"wrote {out} ({out.stat().st_size / 1e6:.1f} MB, {len(index)} companies)")
 
 
-CORE = ("_built", "/overview", "/universe", "/screens", "/runs", "/search_index")
+CORE = ("_built", "/overview", "/universe", "/screens", "/runs", "/search_index", "/tracking")
 
 
 def write_artifact(out: Path, snap: dict) -> None:

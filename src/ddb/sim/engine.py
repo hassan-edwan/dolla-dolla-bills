@@ -372,7 +372,8 @@ class Backtester:
             if abs(qty) < 1e-9:
                 return None
             at_open = self.s.fill == "open" and (not self.s.intraday or bool(self._first_bar[i]))
-            slip = self.costs.slippage_frac(abs(qty) * ref, a, float(vol.get(sym, np.nan)), at_open=at_open)
+            slip = self.costs.slippage_frac(abs(qty) * ref, a, float(vol.get(sym, np.nan)), at_open=at_open,
+                                            symbol=sym, date=d)
             return qty, ref, slip
 
         for sym, qty in orders.items():

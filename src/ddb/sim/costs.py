@@ -13,6 +13,9 @@ class CostModel:
     open_spread_multiplier: float = 1.5
     impact_coef: float = 0.1
     max_participation: float = 0.01
+    # Measured half-spreads (bps), index = first day usable, columns = symbol
+    # (ddb.db.build_spreads.load_measured). Used instead of the tier when known.
+    measured: object = None
 
     @classmethod
     def from_config(cls, cfg: dict) -> "CostModel":
@@ -27,11 +30,23 @@ class CostModel:
                 return bps
         return self.spread_tiers[-1][1]
 
+    def measured_half_bps(self, symbol, date) -> float | None:
+        m = self.measured
+        if m is None or getattr(m, "empty", True) or symbol not in m.columns:
+            return None
+        col = m[symbol].loc[:date].dropna()
+        if col.empty or (date - col.index[-1]).days > 100:
+            return None
+        return float(col.iloc[-1])
+
     def slippage_frac(self, order_value: float, adv_dollars: float, daily_vol: float,
-                      at_open: bool = True) -> float:
+                      at_open: bool = True, symbol=None, date=None) -> float:
         """Adverse price move as a fraction of price (always >= 0)."""
         adv = max(adv_dollars, 1.0)
-        spread = self.half_spread_bps(adv) * (self.open_spread_multiplier if at_open else 1.0) / 1e4
+        half = self.measured_half_bps(symbol, date) if symbol is not None and date is not None else None
+        if half is None:
+            half = self.half_spread_bps(adv)
+        spread = half * (self.open_spread_multiplier if at_open else 1.0) / 1e4
         vol = daily_vol if math.isfinite(daily_vol) else 0.03
         impact = self.impact_coef * vol * math.sqrt(max(order_value, 0.0) / adv)
         return spread + impact

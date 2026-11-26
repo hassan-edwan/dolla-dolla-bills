@@ -225,7 +225,7 @@ def connect(path, read_only: bool = False):
     # Other Parquet-backed feature tables (one directory each).
     for name in ("insider_transactions", "politician_trades", "gov_contracts",
                  "news_events", "regulatory_documents", "filing_text_signals",
-                 "wiki_pageviews", "research_velocity"):
+                 "wiki_pageviews", "research_velocity", "inst_holdings", "inst_filers"):
         d = path.parent / "db" / name
         if d.exists() and any(d.glob("*.parquet")):
             con.execute(f"CREATE OR REPLACE VIEW {name} AS SELECT * FROM "

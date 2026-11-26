@@ -180,7 +180,8 @@
       if (seq === renderSeq && view.firstElementChild === before) view.innerHTML = `<div class="card"><div class="empty">Loading…</div></div>`;
     }, 250);
     try {
-      await ({ month: vMonth, today: vToday, lab: vLab, industry: vIndustry, company: vCompany, decisions: vDecisions })[state.tab]();
+      await ({ month: vMonth, today: vToday, portfolio: vPortfolio, market: vMarket, lab: vLab, industry: vIndustry, company: vCompany, decisions: vDecisions })[state.tab]();
+      updateStrip();
       clearTimeout(loading);
       await applyContext();
     } catch (e) {
@@ -703,9 +704,9 @@
       </div>
       <div class="banner" style="margin-top:14px">Month-end <strong>${day(month)}</strong>: ${m.tradable_n} companies pass the investment screens (of ${m.universe_n} liquid names). The composite uses ${m.used.length} signals that predicted returns on earlier data. Signals are grouped by the question they answer: ${goodQ.map(q => `<strong>${esc(Q[q].label)}</strong> (${qSigs(q).map(lab).map(esc).join(", ") || "nothing proven yet"})`).join("; ")}. Red flags answer ${riskQ.map(q => `<strong>${esc(Q[q].label)}</strong>`).join(" and ")}.</div>
       <div class="grid g2">
-        <div class="card"><h2>Buy candidates</h2><p class="sub">Ranked by the composite. "Why" lists the signals pushing each name up the most.</p>
+        <div class="card"><h2>Buy candidates</h2><p class="sub">Ranked by the composite. "Why" lists the signals pushing each name up the most. A dated chip = results expected within ~${EARN_WARN} trading days (estimated from the company's past reports): entering just before them is a bet on the announcement.</p>
           <div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th class="num">Score</th><th>Why</th></tr></thead><tbody>
-          ${buys.slice(0, 40).map(r => `<tr class="clickable" data-cik="${r.cik}"><td><b>${esc(r.ticker || "")}</b></td><td>${esc(r.name || "")}<div class="muted">${esc(INDUSTRY_LABEL[r.industry] || r.industry || "")}</div></td><td class="num heat" style="${heat(r.composite_pct)}">${Math.round(r.composite_pct)}</td><td class="secondary">${why(r)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">None this month</td></tr>`}
+          ${buys.slice(0, 40).map(r => `<tr class="clickable" data-cik="${r.cik}"><td><b>${esc(r.ticker || "")}</b>${earnChip(r.earnings)}</td><td>${esc(r.name || "")}<div class="muted">${esc(INDUSTRY_LABEL[r.industry] || r.industry || "")}</div></td><td class="num heat" style="${heat(r.composite_pct)}">${Math.round(r.composite_pct)}</td><td class="secondary">${why(r)}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">None this month</td></tr>`}
           </tbody></table></div></div>
         <div class="card"><h2>Avoid</h2><p class="sub">Worst 10% on a signal that predicted losers (5% for distress filings). Most of the measured edge comes from staying out of these.</p>
           <div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th>Red flags</th><th class="num">Score</th></tr></thead><tbody>
@@ -815,12 +816,14 @@
   }
 
   // ------------------------------------------------------------------ Model lab
-  const LAB = [["monthly", "Monthly signals"], ["short", "Daily short-term"], ["intraday", "Intraday"], ["universe", "Universe & screens"], ["sources", "Data sources"]];
+  const LAB = [["monthly", "Monthly signals"], ["short", "Daily short-term"], ["intraday", "Intraday"], ["track", "Track record"],
+               ["execution", "Execution"], ["health", "Data health"], ["universe", "Universe & screens"], ["sources", "Data sources"]];
   async function vLab() {
     view.innerHTML = `<div class="row seg" style="margin-bottom:12px">${LAB.map(([k, l]) => `<button class="iconbtn ${k === state.lab ? "on" : ""}" data-lab="${k}">${l}</button>`).join("")}</div><div id="labbody"></div>`;
     view.querySelectorAll("[data-lab]").forEach(b => b.addEventListener("click", () => { state.lab = b.dataset.lab; render(); }));
     const host = document.getElementById("labbody");
-    const fn = { monthly: vLabMonthly, short: vLabShort, intraday: vLabIntraday, universe: vUniverse, sources: vOverview }[state.lab] || vLabMonthly;
+    const fn = { monthly: vLabMonthly, short: vLabShort, intraday: vLabIntraday, track: vLabTrack, execution: vLabExecution,
+                 health: vLabHealth, universe: vUniverse, sources: vOverview }[state.lab] || vLabMonthly;
     try { await fn(host); }   // keep the lab's sub-navigation if one panel fails
     catch (e) { host.innerHTML = `<div class="card"><div class="empty">Could not load: ${esc(e.message)}</div></div>`; }
   }
@@ -912,6 +915,208 @@
       opt.series = [{ type: "heatmap", data, itemStyle: { borderColor: css("--surface-1"), borderWidth: 2 } }];
       mount(el, opt);
     }
+  }
+
+
+  // ------------------------------------------------------------------ earnings, regime + data-health strip
+  const EARN_WARN = 5;
+  const earnChip = e => (e && e.trading_days != null && e.trading_days <= EARN_WARN)
+    ? ` <span class="chip st-review" title="Next results expected ${esc(e.next)} (${esc(e.method)}; last ${esc(e.last)})"><span class="dot"></span>${e.overdue || e.trading_days === 0 ? "earnings due" : `earnings ~${e.trading_days}d`}</span>` : "";
+  const REG = { calm: "st-pass", caution: "st-review", stress: "st-fail" };
+  const regimeChip = r => r ? `<span class="chip ${REG[r] || "st-unknown"}"><span class="dot"></span>${esc(r)}</span>` : `<span class="muted">unknown</span>`;
+  let mkCache = null, trCache = null;
+  const mkInfo = async () => { if (!mkCache) { try { mkCache = await get("/market"); } catch (e) { mkCache = {}; } } return mkCache; };
+  const trInfo = async () => { if (!trCache) { try { trCache = await get("/tracking"); } catch (e) { trCache = {}; } } return trCache; };
+  const regimeAt = mk => known(mk.days || []).at(-1);
+  async function updateStrip() {
+    const el = document.getElementById("strip");
+    if (!el) return;
+    const [mk, tr] = await Promise.all([mkInfo(), trInfo()]);
+    const r = regimeAt(mk || {});
+    const T = (tr || {}).tracking || {};
+    const stale = (T.freshness || []).filter(f => f.status === "stale");
+    const decaying = (T.decay || []).filter(d => d.alert);
+    const go = (where, html) => `<span class="go" data-go="${where}">${html}</span>`;
+    const parts = [];
+    if (r) parts.push(go("market", `Market on ${day(r.d)}: ${regimeChip(r.regime)}${r.reasons ? ` <span class="secondary">${esc(r.reasons)}</span>` : ""}${r.crash_state ? ` <span class="chip st-fail"><span class="dot"></span>momentum crash risk</span>` : ""}`));
+    if (T.built) parts.push(go("lab:health", stale.length ? `<span class="chip st-fail"><span class="dot"></span>${stale.length} data source${stale.length > 1 ? "s" : ""} stale</span> <span class="muted">(now)</span>`
+                                                           : `<span class="chip st-pass"><span class="dot"></span>data current</span>`));
+    if (decaying.length) parts.push(go("lab:track", `<span class="chip st-review"><span class="dot"></span>${decaying.length} signal${decaying.length > 1 ? "s" : ""} weakening</span>`));
+    (T.alerts || []).forEach(a => parts.push(go("lab:track", `<span class="chip st-review"><span class="dot"></span>${esc(a)}</span>`)));
+    el.innerHTML = parts.join(" &nbsp;·&nbsp; ");
+    el.hidden = !parts.length;
+    el.querySelectorAll("[data-go]").forEach(c => { c.style.cursor = "pointer"; c.onclick = () => {
+      const [tab, lab] = c.dataset.go.split(":");
+      state.tab = tab; if (lab) state.lab = lab;
+      document.querySelectorAll("nav.tabs button").forEach(x => x.setAttribute("aria-selected", x.dataset.tab === state.tab)); render(); }; });
+  }
+
+  // ------------------------------------------------------------------ Portfolio
+  async function vPortfolio() {
+    const stale = staleCheck();
+    const po = await get("/portfolio").catch(() => ({}));
+    if (stale()) return;
+    if (!po.summary) { view.innerHTML = `<div class="card"><div class="empty">The model portfolio hasn't been built yet: python -m ddb.features.regime, then python -m ddb.portfolio.model</div></div>`; return; }
+    const month = latestKnown(po.months || [], 0.9 * 864e5);
+    if (!month) { view.innerHTML = `<div class="card"><div class="empty">No model portfolio as of this date.</div></div>`; return; }
+    const p = await get(`/portfolio_month/${month}`);
+    if (stale()) return;
+    const R = p.risk || {}, cfg = p.config || {}, H = p.holdings || [];
+    const E = known(po.equity || []), last = E.at(-1) || {};
+    const S = po.summary;
+    const lbl = { size: "Smaller companies", mom_12_1: "Momentum", vol_60d: "Lower volatility", book_to_market: "Value (book/market)", gross_prof: "Profitability", high_52w: "Near 52-week high" };
+    const grp = (p.correlated_groups || []);
+    const groupOf = t => grp.findIndex(g => g.includes(t));
+    view.innerHTML = `
+      <div class="banner">The model portfolio is what the monthly system would hold at <strong>${day(month)}</strong>: the top ${cfg.max_names} buy candidates, sized by volatility (calmer names get more), capped at ${pct(cfg.max_weight)} per name, ${pct(cfg.max_industry)} per industry and ${pct(cfg.max_cluster)} per group of names that move together (correlation ≥ ${cfg.cluster_corr}), and scaled to at most ${pct(cfg.target_vol)} expected volatility. Market regime then: ${regimeChip(p.regime)}. Traded through the backtester with costs, T+1 settlement and taxes.</div>
+      <div class="grid tiles">
+        <div class="card tile"><div class="v">${H.length}<span class="secondary" style="font-size:15px"> · ${pct(R.cash)} cash</span></div><div class="l">holdings (of ${p.candidates} buy candidates)</div></div>
+        <div class="card tile"><div class="v">${pct(R.vol)}</div><div class="l">expected volatility, annualized (target ≤ ${pct(cfg.target_vol)})</div></div>
+        <div class="card tile"><div class="v">${R.beta == null ? "–" : R.beta.toFixed(2)}</div><div class="l">beta: moves ${R.beta == null ? "–" : R.beta.toFixed(2)}× the average stock</div></div>
+        <div class="card tile"><div class="v">${R.effective_bets == null ? "–" : R.effective_bets.toFixed(1)}</div><div class="l">effective independent bets (of ${H.length} names); lower = more concentrated risk</div></div>
+        <div class="card tile"><div class="v">${signedPct(p.expected_excess_month, 2)} → ${signedPct(p.expected_after_tax_month, 2)}</div><div class="l">expected vs the average stock per month: before costs → after costs and ${pct(0.32)} short-term tax (past out-of-sample record)</div></div>
+        <div class="card tile"><div class="v ${last.halt_line != null && last.drawdown < last.halt_line ? "check-bad" : ""}">${pct(last.drawdown, 1)}</div><div class="l">drawdown now; the model counts as broken below ${pct(last.halt_line, 1)} (its 99th-percentile 18-month drawdown so far)</div></div>
+      </div>
+      <div class="card" style="margin-top:14px"><h2>Holdings · ${day(month)}</h2><p class="sub">Risk share = how much of the portfolio's swings come from that name (equal shares = well spread). Names marked with the same group move together and are capped as one.</p>
+        <div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th class="num">Weight</th><th class="num">Score</th><th class="num">Volatility</th><th class="num">Beta</th><th class="num">Risk share</th><th>Group</th><th class="num">Expected / mo</th><th>Why</th></tr></thead><tbody>
+        ${H.map(h => `<tr class="clickable" data-cik="${h.cik}"><td><b>${esc(h.ticker || "")}</b>${h.earnings_soon ? earnChip(h.earnings) : ""}</td><td>${esc(h.name || "")}<div class="muted">${esc(INDUSTRY_LABEL[h.industry] || h.industry || "")}</div></td>
+          <td class="num"><span class="bar" style="width:${Math.round(h.weight * 400)}px"></span> ${pct(h.weight, 1)}</td><td class="num">${Math.round(h.composite_pct)}</td>
+          <td class="num">${pct(h.vol)}</td><td class="num">${h.beta == null ? "–" : h.beta.toFixed(2)}</td><td class="num">${pct(h.risk_share)}</td>
+          <td>${groupOf(h.ticker) >= 0 ? `<span class="chip st-review"><span class="dot"></span>group ${groupOf(h.ticker) + 1}</span>` : ""}</td>
+          <td class="num">${signedPct(h.expected_excess, 2)}</td><td class="secondary">${(h.drivers || []).map(esc).join(" · ")}</td></tr>`).join("") || `<tr><td colspan="10" class="muted">No holdings: no buy candidates this month</td></tr>`}
+        </tbody></table></div></div>
+      <div class="grid g3" style="margin-top:14px">
+        <div class="card"><h2>Industry weights</h2><div class="chart short" id="p-ind"></div></div>
+        <div class="card"><h2>Style tilts</h2><p class="sub">Weighted average z-score of the holdings (0 = like the average stock; +1 = one standard deviation toward the label)</p><div class="chart short" id="p-tilt"></div></div>
+        <div class="card"><h2>Correlated groups</h2><p class="sub">Holdings whose daily returns correlate ≥ ${cfg.cluster_corr} over the last ${cfg.risk_lookback_days} days: effectively one bet each.</p>
+          ${grp.length ? grp.map((g, i) => `<div class="row" style="margin:4px 0"><span class="chip st-review"><span class="dot"></span>group ${i + 1}</span> ${g.map(esc).join(", ")}</div>`).join("") : `<div class="empty">None: no two holdings move that closely together</div>`}
+          <p class="sub" style="margin-top:8px">Diversification ratio ${R.diversification == null ? "–" : R.diversification.toFixed(2)} (1 = no diversification benefit). Correlation with the market ${R.corr_to_market == null ? "–" : R.corr_to_market.toFixed(2)}.</p></div>
+      </div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h2>How the holdings move together</h2><p class="sub">Correlation of daily returns, last ${cfg.risk_lookback_days} trading days</p><div class="chart" id="p-corr" style="height:${Math.max(260, 22 * H.length + 90)}px"></div></div>
+        <div class="card"><h2>Backtest: model portfolio vs the average stock</h2><p class="sub">After costs and taxes, up to the as-of date. CAGR ${pct(S.cagr, 1)}, volatility ${pct(S.ann_vol)}, worst drawdown ${pct(S.max_drawdown)}, costs ${pct(S.costs_per_year_pct, 2)} a year, ${S.trades} trades (full-period figures).</p><div class="chart" id="p-eq"></div>
+          <h3 style="margin-top:8px">Drawdown vs the "model broken" line</h3><div class="chart short" id="p-dd"></div></div>
+      </div>`;
+    clickCompanies(view);
+    const iw = Object.entries(p.industry_weights || {}).sort((a, b) => b[1] - a[1]);
+    barChart(document.getElementById("p-ind"), [{ name: "weight", data: iw.map(x => x[1]) }], { category: iw.map(x => INDUSTRY_LABEL[x[0]] || x[0]), yFmt: v => pct(v) });
+    const tl = Object.entries(p.tilts || {});
+    const tEl = document.getElementById("p-tilt");
+    if (!emptyIf(tEl, !tl.length)) {
+      const opt = baseOption({ grid: { left: 150, right: 40, top: 10, bottom: 24 } });
+      opt.xAxis = { type: "value", axisLabel: { color: css("--text-muted") }, splitLine: { lineStyle: { color: css("--grid") } } };
+      opt.yAxis = { type: "category", inverse: true, data: tl.map(x => lbl[x[0]] || x[0]), axisLabel: { color: css("--text-secondary"), fontSize: 11 } };
+      opt.tooltip = { trigger: "item", backgroundColor: css("--surface-1"), borderColor: css("--border"), textStyle: { color: css("--text-primary") }, formatter: q => `${esc(q.name)}: ${q.value.toFixed(2)}` };
+      opt.series = [{ type: "bar", barMaxWidth: 14, data: tl.map(x => ({ value: x[1], itemStyle: { color: x[1] >= 0 ? css("--div-pos") : css("--div-neg") } })), label: { show: true, position: "right", color: css("--text-secondary"), formatter: q => q.value.toFixed(2) } }];
+      mount(tEl, opt);
+    }
+    const cEl = document.getElementById("p-corr"), labs = p.labels || [], M = R.corr || [];
+    if (!emptyIf(cEl, labs.length < 2 || !M.length, "Fewer than two holdings")) {
+      const opt = baseOption({ grid: { left: 70, right: 16, top: 10, bottom: 60 } });
+      opt.xAxis = { type: "category", data: labs, axisLabel: { color: css("--text-muted"), rotate: 45, fontSize: 10, interval: 0 } };
+      opt.yAxis = { type: "category", inverse: true, data: labs, axisLabel: { color: css("--text-secondary"), fontSize: 10, interval: 0 } };
+      const data = []; M.forEach((row, i) => row.forEach((v, j) => { if (v != null) data.push([j, i, v]); }));
+      opt.visualMap = { min: -1, max: 1, show: false, inRange: { color: [css("--div-neg"), css("--div-mid"), css("--div-pos")] } };
+      opt.tooltip = { trigger: "item", backgroundColor: css("--surface-1"), borderColor: css("--border"), textStyle: { color: css("--text-primary") }, formatter: q => `${esc(labs[q.data[1]])} × ${esc(labs[q.data[0]])}: ${q.data[2].toFixed(2)}` };
+      opt.series = [{ type: "heatmap", data, label: { show: labs.length <= 12, fontSize: 9, color: css("--text-primary"), formatter: q => q.data[2].toFixed(1) }, itemStyle: { borderColor: css("--surface-1"), borderWidth: 1 } }];
+      mount(cEl, opt);
+    }
+    lineChart(document.getElementById("p-eq"), [
+      { name: "model portfolio", data: E.map(x => [ms(x.d), x.equity]) },
+      { name: "average stock", data: E.map(x => [ms(x.d), x.benchmark]), color: css("--axis") }], { yFmt: v => "$" + compact(v) });
+    lineChart(document.getElementById("p-dd"), [
+      { name: "drawdown", data: E.map(x => [ms(x.d), x.drawdown]) },
+      { name: "model-broken line", data: E.filter(x => x.halt_line != null).map(x => [ms(x.d), x.halt_line]), color: css("--critical") }], { yFmt: v => pct(v) });
+  }
+
+  // ------------------------------------------------------------------ Market (regime)
+  async function vMarket() {
+    const stale = staleCheck();
+    const mk = await mkInfo();
+    if (stale()) return;
+    if (!mk.days) { view.innerHTML = `<div class="card"><div class="empty">Regime not built yet: python -m ddb.db.build_macro, then python -m ddb.features.regime</div></div>`; return; }
+    const D = known(mk.days), r = D.at(-1) || {};
+    const by = (mk.summary || {}).by_regime || {};
+    const tile = (v, l, bad) => `<div class="card tile"><div class="v ${bad ? "check-bad" : ""}">${v}</div><div class="l">${l}</div></div>`;
+    const th = (mk.summary || {}).thresholds || {};
+    const n = x => x == null ? "–" : x.toFixed(2);
+    view.innerHTML = `
+      <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Market regime · ${day(r.d)}</h2>
+        <p class="sub">One point each for: VIX high, credit spreads wide or widening, market below its 200-day average, fewer than ${pct(th.breadth_low)} of stocks above theirs. ${th.stress_points}+ points = stress; ${th.caution_points} (or 1 with an inverted yield curve) = caution. Uses only data public by each day's close.</p></div>
+        <div style="font-size:18px">${regimeChip(r.regime)}</div></div>
+        <p>${r.reasons ? esc(r.reasons) : "No stress conditions."}${r.crash_state ? ` <span class="chip st-fail"><span class="dot"></span>momentum crash risk: the market is down over 2 years and volatile; momentum strategies have crashed in rebounds from states like this</span>` : ""}</p></div>
+      <div class="grid tiles" style="margin-top:14px">
+        ${tile(n(r.vix), `VIX (top ${r.vix_pct == null ? "–" : Math.round((1 - r.vix_pct) * 100)}% of the last 5 years)`, r.vix >= th.vix_high)}
+        ${tile(n(r.hy_oas) + "%", `high-yield credit spread (${r.hy_chg_3m == null ? "–" : (r.hy_chg_3m >= 0 ? "+" : "") + r.hy_chg_3m.toFixed(2)} in 3 months)`, r.hy_oas >= th.hy_oas_high)}
+        ${tile(n(r.curve_10y3m), "10-year minus 3-month yield (below 0 = inverted)", r.curve_10y3m < 0)}
+        ${tile(signedPct(r.mkt_trend), "average stock vs its 200-day average", r.mkt_trend < 0)}
+        ${tile(pct(r.breadth), "of stocks above their 200-day average", r.breadth < th.breadth_low)}
+        ${tile(pct(r.mkt_vol), "market volatility, last month, annualized", false)}
+      </div>
+      <div class="card" style="margin-top:14px"><h2>Has the model worked in this kind of market?</h2><p class="sub">Out-of-sample monthly composite record, grouped by the regime at each month-end. Few months in a regime = little evidence.</p>
+        <table><thead><tr><th>Regime</th><th class="num">Months</th><th class="num">Top 20% vs average / mo</th><th class="num">Rank IC</th><th class="num">Months right</th></tr></thead><tbody>
+        ${["calm", "caution", "stress"].map(k => { const x = by[k]; return `<tr class="${k === r.regime ? "selected" : ""}"><td>${regimeChip(k)}${k === r.regime ? " <span class='muted'>now</span>" : ""}</td><td class="num">${x?.months ?? 0}</td><td class="num">${signedPct(x?.top20_vs_avg, 2)}</td><td class="num">${x?.ic == null ? "–" : x.ic.toFixed(3)}</td><td class="num">${pct(x?.hit)}</td></tr>`; }).join("")}
+        </tbody></table>
+        ${by.momentum_in_crash_states ? `<p class="sub" style="margin-top:8px">Momentum (12-1) IC in crash-risk months: ${by.momentum_in_crash_states.ic == null ? "– (none yet)" : by.momentum_in_crash_states.ic.toFixed(3)} over ${by.momentum_in_crash_states.months} months, vs ${n(by.momentum_in_crash_states.ic_otherwise)} otherwise.</p>` : ""}</div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h2>Fear and credit</h2><p class="sub">VIX and the high-yield spread (%)</p><div class="chart" id="m-fear"></div></div>
+        <div class="card"><h2>Market trend</h2><p class="sub">Equal-weight index of liquid stocks (median daily return)</p><div class="chart" id="m-idx"></div></div>
+        <div class="card"><h2>Breadth</h2><p class="sub">Share of liquid stocks above their 200-day average</p><div class="chart" id="m-br"></div></div>
+        <div class="card"><h2>Yield curve</h2><p class="sub">10y − 2y and 10y − 3m, percentage points</p><div class="chart" id="m-yc"></div></div>
+      </div>`;
+    const W = D.filter((x, i) => i % 5 === 0 || i === D.length - 1);
+    lineChart(document.getElementById("m-fear"), [{ name: "VIX", data: W.map(x => [ms(x.d), x.vix]) }, { name: "HY spread", data: W.map(x => [ms(x.d), x.hy_oas]) }], { yFmt: v => (v ?? 0).toFixed(0) });
+    lineChart(document.getElementById("m-idx"), [{ name: "index", data: W.map(x => [ms(x.d), x.mkt_index]) }], { yFmt: v => (v ?? 0).toFixed(2) });
+    lineChart(document.getElementById("m-br"), [{ name: "breadth", data: W.map(x => [ms(x.d), x.breadth]), markLine: { y: th.breadth_low, label: "stress line" } }], { yFmt: v => pct(v), yMin: 0 });
+    lineChart(document.getElementById("m-yc"), [{ name: "10y−2y", data: W.map(x => [ms(x.d), x.curve_10y2y]) }, { name: "10y−3m", data: W.map(x => [ms(x.d), x.curve_10y3m]) }], { yFmt: v => (v ?? 0).toFixed(1) });
+  }
+
+  // ------------------------------------------------------------------ lab: track record, execution, data health
+  async function vLabTrack(host) {
+    const tr = await trInfo(), T = tr.tracking || {};
+    if (!T.built) { host.innerHTML = `<div class="card"><div class="empty">Run python -m ddb.live.tracking after each data update.</div></div>`; return; }
+    const WF = known(T.walk_forward || []);
+    host.innerHTML = `
+      <div class="card"><h2>Live forecasts</h2><p class="sub">Each month-end ranking is saved the first time it's seen and never changed, then scored once the month is over: did the buy candidates beat the average screened name? This is the honest record, built up from the first run on.</p>
+        <table><thead><tr><th>Month</th><th>Logged</th><th class="num">Names</th><th>Status</th><th class="num">Buy candidates vs avg</th><th class="num">Avoid vs avg</th></tr></thead><tbody>
+        ${(T.monthly_forecasts || []).slice().reverse().map(f => `<tr><td>${day(f.month)}</td><td class="muted">${day(f.logged_at)}</td><td class="num">${f.names}</td><td>${f.status === "scored" ? statusChip("pass") : `<span class="muted">${esc(f.status)}</span>`}</td>
+          <td class="num ${f.buy_vs_avg > 0 ? "check-ok" : f.buy_vs_avg < 0 ? "check-bad" : ""}">${signedPct(f.buy_vs_avg, 2)}</td><td class="num">${signedPct(f.avoid_vs_avg, 2)}</td></tr>`).join("") || `<tr><td colspan="6" class="muted">Nothing logged yet</td></tr>`}
+        </tbody></table></div>
+      <div class="card" style="margin-top:14px"><h2>Walk-forward record</h2><p class="sub">Top 20% minus the average name each month (out-of-sample), and its 12-month average. A 12-month average below zero is a warning.</p><div class="chart tall" id="t-wf"></div></div>
+      <div class="card" style="margin-top:14px"><h2>Are the signals still working?</h2><p class="sub">Recent rank IC vs the signal's earlier record. Alert = recent IC below zero or t below ${esc(String(T.config?.decay_t_min ?? 1))}.</p>
+        <table><thead><tr><th>Signal</th><th>Kind</th><th>Window</th><th class="num">Recent IC</th><th class="num">t</th><th class="num">Earlier IC</th><th>Status</th></tr></thead><tbody>
+        ${(T.decay || []).map(d => `<tr><td><b>${esc(d.label)}</b>${d.in_composite ? ` <span class="muted">in composite</span>` : ""}</td><td>${esc(d.kind)}</td><td class="muted">${esc(d.window)}</td><td class="num">${d.recent_ic == null ? "–" : d.recent_ic.toFixed(3)}</td><td class="num">${d.recent_t == null ? "–" : d.recent_t.toFixed(1)}</td><td class="num">${d.earlier_ic == null ? "–" : d.earlier_ic.toFixed(3)}</td>
+          <td>${d.alert ? `<span class="chip st-review"><span class="dot"></span>weakening</span>` : `<span class="chip st-pass"><span class="dot"></span>holding up</span>`}</td></tr>`).join("") || `<tr><td colspan="7" class="muted">No proven signals to monitor</td></tr>`}
+        </tbody></table></div>`;
+    lineChart(document.getElementById("t-wf"), [
+      { name: "top 20% vs average", data: WF.map(x => [ms(x.d), x.top20]), color: css("--axis") },
+      { name: "12-month average", data: WF.filter(x => x.top20_roll12 != null).map(x => [ms(x.d), x.top20_roll12]) }], { yFmt: v => signedPct(v, 1) });
+  }
+
+  async function vLabExecution(host) {
+    const tr = await trInfo(), X = tr.execution || {};
+    if (!X.fills) { host.innerHTML = `<div class="card"><h2>Execution quality</h2><div class="empty">No paper-trading fills yet. Once the model places orders in the Alpaca paper account, run <code>python -m ddb.live.execution</code> to compare each fill with the arrival price and with the cost model.</div></div>`; return; }
+    host.innerHTML = `
+      <div class="grid tiles"><div class="card tile"><div class="v">${X.fills}</div><div class="l">fills (${X.with_arrival} with an arrival price)</div></div>
+        <div class="card tile"><div class="v ${X.realized_bps > X.model_bps ? "check-bad" : "check-ok"}">${X.realized_bps == null ? "–" : X.realized_bps.toFixed(1)} bp</div><div class="l">average realized cost per fill vs arrival</div></div>
+        <div class="card tile"><div class="v">${X.model_bps == null ? "–" : X.model_bps.toFixed(1)} bp</div><div class="l">what the cost model assumed for the same orders</div></div>
+        <div class="card tile"><div class="v">${pct(X.worse_than_model_share)}</div><div class="l">of fills worse than the model</div></div></div>
+      <div class="banner" style="margin-top:14px">If realized costs run above the model, every backtest and every "pays after costs" verdict here is too optimistic.</div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h2>By liquidity tier</h2><table><thead><tr><th class="num">Tier half-spread</th><th class="num">Fills</th><th class="num">Realized</th><th class="num">Model</th></tr></thead><tbody>
+          ${(X.by_tier || []).map(t => `<tr><td class="num">${t.tier_bps} bp</td><td class="num">${t.fills}</td><td class="num">${t.realized_bps?.toFixed(1)} bp</td><td class="num">${t.model_bps?.toFixed(1)} bp</td></tr>`).join("")}</tbody></table></div>
+        <div class="card"><h2>Recent fills</h2><div class="scroll"><table><thead><tr><th>Filled</th><th>Symbol</th><th>Side</th><th class="num">Fill</th><th class="num">Arrival</th><th class="num">Realized</th><th class="num">Model</th></tr></thead><tbody>
+          ${(X.recent || []).map(f => `<tr><td class="muted">${esc(String(f.filled_at).slice(0, 16).replace("T", " "))}</td><td><b>${esc(f.symbol)}</b></td><td>${esc(f.side)}</td><td class="num">$${f.fill?.toFixed(2)}</td><td class="num">${f.arrival == null ? "–" : "$" + f.arrival.toFixed(2)}</td><td class="num">${f.realized_bps == null ? "–" : f.realized_bps.toFixed(1)}</td><td class="num">${f.model_bps?.toFixed(1)}</td></tr>`).join("")}</tbody></table></div></div>
+      </div>`;
+  }
+
+  async function vLabHealth(host) {
+    const tr = await trInfo(), F = (tr.tracking || {}).freshness || [];
+    host.innerHTML = `<div class="card"><h2>Data health (now, not as-of)</h2><p class="sub">Newest public row in each source vs how often it should update (configs/risk.yaml). A stale source silently freezes the signals built on it.</p>
+      <table><thead><tr><th>Source</th><th>Newest data</th><th class="num">Age</th><th class="num">Allowed</th><th>Status</th></tr></thead><tbody>
+      ${F.map(f => `<tr><td><b>${esc(f.source)}</b></td><td>${day(f.last)}</td><td class="num">${f.age_days == null ? "–" : f.age_days.toFixed(1) + " d"}</td><td class="num">${f.limit_days ?? "–"} d</td>
+        <td>${f.status === "ok" ? statusChip("pass") : f.status === "stale" ? `<span class="chip st-fail"><span class="dot"></span>stale</span>` : `<span class="chip st-unknown"><span class="dot"></span>not loaded</span>`}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Run python -m ddb.live.tracking</td></tr>`}
+      </tbody></table></div>`;
   }
 
   async function vDecisions() {

@@ -1,0 +1,51 @@
+# Portfolio, risk, market regime and monitoring settings.
+
+regime:
+  # Each condition that holds adds one point; points decide the label.
+  stress_points: 3          # >= 3 points -> stress
+  caution_points: 2         # >= 2 points (or 1 point with an inverted curve) -> caution
+  vix_high: 30              # VIX level, or ...
+  vix_pct_high: 0.90        # ... VIX in its top 10% of the trailing 5 years
+  hy_oas_high: 6.0          # high-yield spread, % points, or ...
+  hy_oas_jump_3m: 1.5       # ... a 3-month widening of this many points
+  breadth_low: 0.35         # share of stocks above their 200-day average
+  # Momentum crash state (Daniel-Moskowitz 2016): market down over 24 months and
+  # recent volatility high. Momentum tends to crash in the rebound from such states.
+  crash_mkt_24m: 0.0
+  crash_vol_pct: 0.80
+
+portfolio:
+  # Model portfolio built from the monthly buy candidates (This month tab).
+  max_names: 15
+  sizing: inverse_vol       # inverse_vol | equal
+  vol_lookback_days: 63
+  max_weight: 0.10          # per name
+  max_industry: 0.40        # per industry
+  cluster_corr: 0.70        # holdings this correlated count as one cluster ...
+  max_cluster: 0.25         # ... and a cluster gets at most this weight
+  target_vol: 0.25          # annualized; scale down (hold cash) when expected vol is higher
+  min_weight: 0.02          # drop positions smaller than this
+  stress_exposure: 1.0      # equity exposure in a stress regime (1.0 = regime ignored; e.g. 0.5 to halve)
+  risk_lookback_days: 126   # correlations, betas, risk contributions
+  earnings_warning_days: 5  # flag holdings reporting within this many trading days
+  start: "2016-01-01"
+
+tracking:
+  decay_window_months: 12   # rolling IC window for monthly signals
+  decay_window_days: 120    # rolling IC window for daily data points
+  decay_t_min: 1.0          # alert when the recent t-stat falls below this ...
+  # ... or the recent average IC turns negative.
+
+freshness:
+  # Maximum age (days) before a source is flagged stale. Quarterly sources get longer.
+  prices: 4
+  filings: 4
+  insider_transactions: 7
+  events: 7
+  news_events: 3
+  macro: 5
+  politician_trades: 45
+  gov_contracts: 45
+  inst_holdings: 140
+  spreads: 45
+  intraday: 4

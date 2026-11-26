@@ -13,6 +13,8 @@
   <nav class="tabs" role="tablist">
     <button data-tab="month" aria-selected="true">This month</button>
     <button data-tab="today">Today</button>
+    <button data-tab="portfolio">Portfolio</button>
+    <button data-tab="market">Market</button>
     <button data-tab="company">Company</button>
     <button data-tab="industry">Industries</button>
     <button data-tab="decisions">Model decisions</button>
@@ -33,6 +35,7 @@
 </header>
 <main>
   <div class="banner" id="banner"></div>
+  <div class="banner strip" id="strip" hidden></div>
   <section id="view"></section>
 </main>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
