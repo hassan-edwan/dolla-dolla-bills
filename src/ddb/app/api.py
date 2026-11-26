@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import threading
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -25,12 +26,38 @@ DB_PATH = DATA_DIR / "ddb.duckdb"
 app = FastAPI(title="dolla-dolla-bills dashboard")
 
 
+_LOCK = threading.Lock()
+
+
+class _Locked:
+    """A connection used by one request at a time. connect() rewrites the Parquet-backed
+    views, so two requests opening the file at once conflict; requests queue instead.
+    The file is still not held open between requests, so loaders can write to it."""
+
+    def __init__(self, con):
+        self._con = con
+
+    def __getattr__(self, name):
+        return getattr(self._con, name)
+
+    def close(self):
+        try:
+            self._con.close()
+        finally:
+            _LOCK.release()
+
+
 def _con():
     # connect() (read-write) refreshes the Parquet-backed views; fall back to read-only if locked.
+    _LOCK.acquire()
     try:
-        return connect(DB_PATH)
-    except Exception:  # noqa: BLE001
-        return connect(DB_PATH, read_only=True)
+        try:
+            return _Locked(connect(DB_PATH))
+        except Exception:  # noqa: BLE001
+            return _Locked(connect(DB_PATH, read_only=True))
+    except BaseException:
+        _LOCK.release()
+        raise
 
 
 def _json(data):

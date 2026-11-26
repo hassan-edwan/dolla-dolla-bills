@@ -274,8 +274,8 @@ signals:
 # under these instead of by data source. kind: good = high is favorable;
 # risk = a validated avoid signal here raises a red flag.
 questions:
-  business:    {label: "Is it a real business?", kind: good}
-  trend:       {label: "Is the market confirming it?", kind: good}
-  distress:    {label: "Could it fail or dilute?", kind: risk}
-  speculation: {label: "Is it a lottery ticket?", kind: risk}
-  flows:       {label: "Who is buying and watching?", kind: good}
+  business:    {label: "Is it a real business?", short: Business, kind: good}
+  trend:       {label: "Is the market confirming it?", short: Trend, kind: good}
+  distress:    {label: "Could it fail or dilute?", short: Distress, kind: risk}
+  speculation: {label: "Is it a lottery ticket?", short: Speculation, kind: risk}
+  flows:       {label: "Who is buying and watching?", short: Flows, kind: good}

@@ -659,12 +659,18 @@ def company_short_term(con, cik: int) -> dict:
 
 
 def company_signals(con, cik: int) -> list[dict]:
+    """Monthly percentiles for one company, with that month's red flags and verdict."""
     df = _q(con, f"SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE cik = ? ORDER BY d", [int(cik)])
     if df.empty:
         return []
     pcols = [c for c in df.columns if c.endswith("__pct")]
+    proven = _proven_avoid()
     out = []
     for r in df.to_dict(orient="records"):
+        flags = _flags(r, proven)
+        cp = None if pd.isna(r.get("composite__pct")) else float(r["composite__pct"])
         out.append({"d": str(r["d"])[:10], "k": (pd.Timestamp(r["d"]) + pd.Timedelta(hours=21, minutes=30)).isoformat() + "Z",
-                    "pct": {c[:-5]: (None if pd.isna(r[c]) else round(float(r[c]), 1)) for c in pcols}})
+                    "pct": {c[:-5]: (None if pd.isna(r[c]) else round(float(r[c]), 1)) for c in pcols},
+                    "flags": flags,
+                    "verdict": "avoid" if flags else "buy candidate" if (cp or 0) >= 80 else "hold" if (cp or 0) >= 40 else "weak"})
     return out

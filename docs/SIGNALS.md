@@ -23,11 +23,19 @@ The literature review is in [`reports/Predictive signals for growth stocks.md`](
 - **Composite:** walk-forward. Each month it averages the industry-neutral,
   winsorized z-scores of the signals that had t ≥ 2 on earlier months only, so its
   track record is out-of-sample.
-- **Dashboard:**
-  - Panels whose data did not predict (status not predictive / moderate) are hidden
-    unless "unvalidated context" is on.
-  - Avoid signals (those that predict losers) appear as flags that exclude names
-    from long candidates.
+- **Dashboard** (organized by decision, not by data source):
+  - Each signal answers one question (`question` in `configs/signals.yaml`):
+    *Is it a real business? Is the market confirming it? Who is buying and
+    watching?* and the red-flag questions *Could it fail or dilute? Is it a
+    lottery ticket?* A company's score on a question is the average percentile of
+    that question's signals the composite used that month (so only proven ones).
+  - Verdict: **buy candidate** = top 20% on the composite and no red flag;
+    **avoid** = a red flag; otherwise hold (40-80) or weak.
+  - Red flags come only from avoid signals that predicted losers (predictive or
+    moderate): worst 10% (5% for going-concern / late filings).
+  - "What changed": names that entered or left the top 20% since the previous
+    month-end, and new red flags.
+  - Panels whose data did not predict are hidden unless "unvalidated context" is on.
 
 ## Results (build of 2026-11-26)
 
@@ -90,3 +98,48 @@ comes from avoiding losers, as the literature predicts.
   - These are observations; their sign was not flipped after the fact.
 - **Thin news history:** news (GDELT) only covers recent months until the backfill
   completes, so its status is provisional.
+
+## Short-term and intraday data points
+
+Configured in `configs/short_term.yaml`; the bar engine is `ddb.features.bars`.
+
+**Rules** (same no-hindsight standard as the monthly panel):
+
+- A value at bar i uses bars that had closed by then. Intraday bars are labeled
+  by their end time (New York); the 09:30-09:35 bar is public at 09:35.
+- Targets enter at the **next bar's open** (never the decision bar's close) and
+  exit h bars later; intraday targets never cross the session close.
+- Fresh events (offerings, distress filings, earnings, insider buys, news) count
+  from the first trading day whose close came after they were public.
+- Every data point is tested **after costs**: round-trip spread from the
+  liquidity tiers in `configs/sim.yaml`, wider at the open. Edge after costs =
+  top 20% minus the average name minus that cost. For avoid signals it is how far
+  the flagged names lag; avoiding costs nothing.
+- Intraday statistics average each trading day first, so thousands of bars in a
+  day count as one observation; results are also broken down by time of day.
+- The short-term composites are walk-forward like the monthly one: each month uses
+  only data points with t >= 3 on earlier data.
+
+**Daily** (`python -m ddb.features.daily`): next-day and 5-day horizons since 2012:
+reversal (1 and 5 days), opening gap, volume surge, close location, 20-day
+breakout, daily range (ATR, for stops and sizing), fresh earnings reaction, new
+offering, new distress filing, fresh insider buying, news and Wikipedia spikes.
+
+**Intraday** (`python -m ddb.db.build_intraday`, then `python -m ddb.features.intraday`):
+1-minute Alpaca bars (free account, SIP feed, 2016+, regular session), resampled
+to 5-minute, 15-minute and hourly bars: last bar's move, short- and long-window
+trend within the session, move since the open, distance from VWAP, volume vs normal
+for that time of day, position in the day's range, the day's gap, intraday
+volatility. Download scope: the most liquid names in the tracked industries
+(including later-delisted ones), plus the configured candidates and benchmarks.
+
+**Learning on bars.** `ddb.features.intraday.load_pricedata(symbols, "15Min", start, end)`
+returns bars the backtester can step through with `SimSettings(intraday=True)`:
+the same costs; T+1 settlement and the good-faith rule counted in trading days;
+liquidity measured from prior sessions only; the opening spread only at the
+session's first bar; and `view.bars_left_in_session()` so a strategy can be flat
+by the close. A cash account can trade its full balance about once a day.
+
+**Results:** not run yet on the real database. Run the two commands above; the
+scorecards appear on the dashboard (Today, and Model lab). Expect most
+short-horizon data points to be statistically real but smaller than costs.

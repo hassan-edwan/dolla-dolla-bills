@@ -123,3 +123,15 @@ tr.clickable:hover td, tr.selected td { background: var(--surface-2); }
 td.heat { font-variant-numeric: tabular-nums; }
 .ctx-banner { border-style: dashed; }
 .ctx-note { margin-top: -2px; }
+
+.iconbtn.on { color: var(--text-primary); background: var(--surface-2); font-weight: 600; }
+.chip.unproven { opacity: 0.55; border-style: dashed; }
+code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+.verdict { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+.q { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.q .qv { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.q .ql { color: var(--text-secondary); font-size: 12.5px; }
+.q.risk-on { border-color: var(--critical); }
+details.bg > summary { cursor: pointer; color: var(--text-secondary); font-size: 13px; margin: 14px 0 10px; }
+td.num { white-space: nowrap; }

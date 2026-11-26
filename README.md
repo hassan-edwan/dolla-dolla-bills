@@ -36,20 +36,44 @@ export DDB_SEC_USER_AGENT="dolla-dolla-bills your-email@example.com"   # SEC req
 .venv/bin/python scripts/export_dashboard.py # one-file snapshot -> data/results/dashboard.html
 ```
 
-Every view has an **as-of date**: it shows only information that was public by
-then, i.e. exactly what a model could see. Tabs:
+Signals and short-term data points come first (each step reads the database):
 
-- **Overview:** data coverage.
-- **Universe & screens:** active vs tradable companies per industry over time;
-  exclusions with reasons.
-- **Industries:** filing language, news, research, attention, insider money, exits,
-  regulation, contracts, congressional trades, committee leaders.
-- **Company:** everything on one company: price, events, Sharia ratios,
-  financials, insiders, Congress, contracts, news, filings language.
+```bash
+.venv/bin/python -m ddb.features.panel      # monthly signal panel
+.venv/bin/python -m ddb.features.validate   # monthly tests + walk-forward composite
+.venv/bin/python -m ddb.features.daily      # next-day / 5-day data points, tested after costs
+# optional, intraday (free Alpaca key; ~1 minute per symbol-year of 1-minute bars):
+.venv/bin/python -m ddb.db.build_intraday --max-symbols 100
+.venv/bin/python -m ddb.features.intraday   # 1/5/15-minute and hourly data points, tested after costs
+```
+
+Every view has an **as-of date**: it shows only information that was public by
+then, i.e. exactly what a model could see. The tabs follow the decision, not the
+data source:
+
+- **This month:** buy candidates (pass every screen, top 20% on the walk-forward
+  composite, no red flags) with the signals behind each; names to avoid (red
+  flags from signals that predicted losers); what changed since last month-end;
+  every screened company scored on the questions *Is it a real business? Is the
+  market confirming it? Who is buying and watching?* plus the red-flag questions
+  *Could it fail or dilute? Is it a lottery ticket?* (`configs/signals.yaml`).
+- **Today:** short-term setups for the next open, alerts from the last few days
+  (earnings reaction, offering or distress filing, insider buying, gaps, volume
+  and news spikes), each data point's edge **after trading costs**, daily range for
+  stops, and the intraday (minute/hour) results. If the short-term composite does
+  not beat costs, the page says so.
+- **Company:** the monthly verdict by question and the short-term picture first,
+  then the evidence: price, events, Sharia ratios, financials, insiders, Congress,
+  contracts, news, filings language.
+- **Industries:** candidates, red flags and median scores per industry; the
+  per-source background (news, research, regulation, ...) is collapsed.
 - **Model decisions:** each trade a model made, the factors behind it with their
   contributions, and the source and public date of every piece of evidence.
   Decisions whose evidence postdates the decision cannot be recorded
   (`ddb.decisions.DecisionLog`).
+- **Model lab:** how every monthly, daily and intraday data point was tested
+  (scorecards, IC over time, quintiles, costs, time of day), universe & screens,
+  data sources.
 
 "Hindsight labels" (how a listing ended) are hidden unless switched on.
 
@@ -64,6 +88,8 @@ then, i.e. exactly what a model could see. Tabs:
 | `src/ddb/strategies/` | Baselines every learned strategy must beat |
 | `src/ddb/metrics.py` | Rolling 18-month return distribution and drawdown metrics |
 | `src/ddb/db/` | Company database builders, point-in-time API (`pit.py`), screens |
+| `configs/short_term.yaml` | Daily and intraday data points, horizons, bar sizes, intraday download scope |
+| `src/ddb/features/` | Monthly panel + validation; `bars.py` (bar features, after-cost tests), `daily.py`, `intraday.py` |
 | `src/ddb/news/` | News pipeline: GDELT, filing-text signals, Wikipedia attention, arXiv |
 | `src/ddb/app/` | Dashboard: API (`api.py`), queries, static frontend |
 | `src/ddb/decisions.py` | Decision record format every model must write (explainability + no-hindsight check) |

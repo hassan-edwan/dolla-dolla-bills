@@ -61,6 +61,15 @@ The database enforces this:
    against `outcomes`, `companies` (current-state snapshot) or the research tables
    raise `LookaheadError`.
 
+## Intraday bars
+
+`python -m ddb.db.build_intraday [--max-symbols N] [--start 2019-01-01]` downloads
+1-minute bars from Alpaca (free key, SIP feed, regular session, split-adjusted)
+into `data/db/intraday/1Min/<SYMBOL>/<YEAR>.parquet`; `symbols.parquet` maps them to
+companies. Each bar's `knowable_at` is its end (start + 1 minute). Past years are
+skipped when present, so the job resumes after a stop. At 200 requests/minute,
+one symbol-year takes about a minute. Scope and bar sizes: `configs/short_term.yaml`.
+
 ## Investment screens (what may be traded)
 
 The user does not invest in **weapons makers**, **Israeli companies**, or
