@@ -230,6 +230,7 @@ def company(con, cik: int) -> dict:
         SELECT file_date, form, signal, phrase, accession, document, knowable_at AS k
         FROM filing_text_signals WHERE cik = ? ORDER BY knowable_at DESC LIMIT 400""", [cik]))
     out["signals"] = company_signals(con, cik)
+    out["short_term"] = company_short_term(con, cik)
     out["labels"] = _records(_q(con, """SELECT outcome, exit_date, method, confidence, consideration, source_url,
                                         event_known_at AS k FROM outcomes WHERE cik = ?""", [cik]))
     return out
@@ -326,7 +327,9 @@ def decisions(con, run_id: str) -> dict:
 
 
 # ------------------------------------------------------------------ signals (validated predictors)
-SIG = "data/db/signals"
+from ..config import DATA_DIR  # noqa: E402
+
+SIG = (DATA_DIR / "db" / "signals").as_posix()   # absolute, so the app works from any directory
 AVOID_RULES = {   # long-only exclusion flags from short-leg signals (percentiles are sign-adjusted: low = bad)
     "vol_60d": "very volatile", "max_ret_21d": "lottery spike", "net_issuance": "heavy dilution",
     "offerings_12m": "raising equity", "days_to_cover": "crowded short", "short_pct": "heavily shorted",
@@ -377,40 +380,282 @@ def signals_overview(con) -> dict:
             "quintiles": quint, "ic_series": series, "composite_series": comp_series,
             "composite_signals_by_month": v.get("composite_signals_by_month", {}),
             "correlation": v.get("correlation", {}), "avoid_rules": AVOID_RULES,
+            "questions": _signal_cfg().get("questions", {}),
             "months": [str(m)[:10] for m in months["d"]]}
 
 
-def signal_month(con, month: str, limit: int = 200) -> dict:
-    """Ranked candidates for one month-end: companies passing every investment screen
-    as of that date, with signal percentiles and avoid flags."""
+def _signal_cfg() -> dict:
+    return yaml.safe_load((CONFIG_DIR / "signals.yaml").read_text())
+
+
+def _proven_avoid() -> set:
+    """Avoid signals that predicted losers in our tests (predictive or moderate)."""
+    return {x["signal"] for x in (_validation().get("signals") or []) if x.get("status") in ("predictive", "moderate")}
+
+
+def _flags(d: dict, proven: set | None = None) -> list[str]:
+    """Avoid flags: the name sits in the worst decile (5% for rare distress events) of an
+    avoid signal that predicted losers in our tests (`proven`; all avoid rules if None)."""
+    out = []
+    for s, lab in AVOID_RULES.items():
+        if proven is not None and s not in proven:
+            continue
+        v = d.get(f"{s}__pct")
+        if v is None or pd.isna(v):
+            continue
+        if v <= (5 if s in ("going_concern", "late_filings_12m") else 10) and \
+                not (s in ("going_concern", "late_filings_12m", "offerings_12m") and (d.get(s) or 0) == 0):
+            out.append(lab)
+    return out
+
+
+def _month_scores(con, month: str) -> pd.DataFrame:
+    return _q(con, f"SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE CAST(d AS DATE) = CAST(? AS DATE)", [month[:10]])
+
+
+def signal_month(con, month: str, limit: int = 250) -> dict:
+    """The monthly decision view: companies passing every investment screen at a month-end,
+    ranked by the walk-forward composite and organized by the questions in signals.yaml.
+
+    Per row: composite percentile, a verdict (buy candidate / avoid / hold), a score per
+    question (average percentile of that question's signals in use that month), avoid flags,
+    the biggest drivers of the composite, and what changed since the previous month-end.
+    Only signals the composite used that month (proven on earlier data) count."""
     from ..db.pit import AsOf
     v = _validation()
+    cfg = _signal_cfg()
+    qcfg, scfg = cfg.get("questions", {}), cfg["signals"]
     used = (v.get("composite_signals_by_month") or {}).get(month[:10], [])
-    sc = _q(con, f"SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE CAST(d AS DATE) = CAST(? AS DATE)", [month[:10]])
+    sc = _month_scores(con, month)
+    base = {"month": month[:10], "used": used, "questions": qcfg,
+            "question_signals": {q: [s for s in used if scfg.get(s, {}).get("question") == q] for q in qcfg}}
     if sc.empty:
-        return {"month": month[:10], "rows": [], "used": used}
+        return {**base, "rows": [], "changes": {}}
     t = pd.Timestamp(month[:10]) + pd.Timedelta(hours=21, minutes=30)
+    with AsOf(con, t) as db:
+        trad = set(db.tradable()["cik"].astype(int))
+    universe_n = len(sc)
+    months = _q(con, f"SELECT DISTINCT CAST(d AS DATE) AS d FROM read_parquet('{SIG}/scores.parquet') "
+                     "WHERE CAST(d AS DATE) < CAST(? AS DATE) ORDER BY 1 DESC LIMIT 1", [month[:10]])
+    prev = _month_scores(con, str(months["d"].iloc[0])) if len(months) else pd.DataFrame()
+    proven = _proven_avoid()
+    prev_state = {}
+    for r in prev.to_dict(orient="records"):
+        prev_state[int(r["cik"])] = {"pct": None if pd.isna(r.get("composite__pct")) else float(r["composite__pct"]),
+                                     "flags": _flags(r, proven)}
+    names = _q(con, "SELECT cik, name, current_tickers[1] AS ticker FROM companies")
+    sc = sc.merge(names, on="cik", how="left")
+    label = {s: c.get("label", s) for s, c in scfg.items()}
+    rows = []
+    for r in sc.sort_values("composite", ascending=False).to_dict(orient="records"):
+        cik = int(r["cik"])
+        flags = _flags(r, proven)
+        cp = None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1)
+        qs = {}
+        for q in qcfg:
+            vals = [r.get(f"{s}__pct") for s in base["question_signals"][q]]
+            vals = [float(x) for x in vals if x is not None and not pd.isna(x)]
+            qs[q] = round(sum(vals) / len(vals), 1) if vals else None
+        contrib = sorted(((float(r[f"{s}__z"]), s) for s in used if f"{s}__z" in r and r[f"{s}__z"] is not None
+                          and not pd.isna(r[f"{s}__z"])), reverse=True)
+        drivers = [{"signal": s, "label": label.get(s, s), "z": round(z, 2)} for z, s in contrib[:2] if z > 0.5]
+        drags = [{"signal": s, "label": label.get(s, s), "z": round(z, 2)} for z, s in contrib[::-1][:2] if z < -0.5]
+        verdict = "avoid" if flags else "buy candidate" if (cp or 0) >= 80 else "hold" if (cp or 0) >= 40 else "weak"
+        pv = prev_state.get(cik)
+        change = None
+        if pv is None:
+            change = "new in universe"
+        elif (cp or 0) >= 80 and (pv["pct"] or 0) < 80:
+            change = "entered top 20%"
+        elif (cp or 0) < 80 and (pv["pct"] or 0) >= 80:
+            change = "left top 20%"
+        new_flags = [f for f in flags if pv is None or f not in pv["flags"]]
+        rows.append({"cik": cik, "ticker": r.get("ticker"), "name": r.get("name"), "industry": r.get("industry"),
+                     "tradable": cik in trad, "composite_pct": cp, "prev_pct": pv["pct"] if pv else None,
+                     "verdict": verdict, "questions": qs, "flags": flags, "new_flags": new_flags,
+                     "drivers": drivers, "drags": drags, "change": change,
+                     "pct": {s: (None if pd.isna(r.get(f"{s}__pct")) else round(float(r[f"{s}__pct"]), 1))
+                             for s in [x["signal"] for x in v.get("signals", [])] if f"{s}__pct" in r},
+                     "price": r.get("price_raw"), "dollar_vol": r.get("dollar_vol_20d"), "mcap": r.get("mcap")})
+    trad_rows = [x for x in rows if x["tradable"]]
+    # names that were top-20% last month and fell out (or left the tradable universe)
+    now = {x["cik"]: x for x in trad_rows}
+    left = []
+    for cik, pv in prev_state.items():
+        if (pv["pct"] or 0) >= 80 and (cik not in now or (now[cik]["composite_pct"] or 0) < 80):
+            x = now.get(cik)
+            nm = names[names["cik"] == cik]
+            left.append({"cik": cik, "ticker": nm["ticker"].iloc[0] if len(nm) else None,
+                         "name": nm["name"].iloc[0] if len(nm) else None, "prev_pct": pv["pct"],
+                         "composite_pct": x["composite_pct"] if x else None,
+                         "why": ("no longer passes screens or liquidity" if x is None else
+                                 "flagged: " + ", ".join(x["new_flags"] or x["flags"]) if x["flags"] else
+                                 "score fell")})
+    changes = {
+        "entered": [x for x in trad_rows if x["change"] == "entered top 20%"],
+        "left": sorted(left, key=lambda x: -(x["prev_pct"] or 0)),
+        "new_flags": [x for x in trad_rows if x["new_flags"]],
+        "prev_month": str(months["d"].iloc[0])[:10] if len(months) else None,
+    }
+    return {**base, "k": (t + pd.Timedelta(minutes=1)).isoformat() + "Z", "universe_n": universe_n,
+            "tradable_n": len(trad_rows), "rows": _records(pd.DataFrame(trad_rows))[:limit] if trad_rows else [],
+            "changes": {k: (_records(pd.DataFrame(v))[:60] if isinstance(v, list) and v else v) for k, v in changes.items()}}
+
+
+# ------------------------------------------------------------------ short-term (daily + intraday)
+def _short_cfg() -> dict:
+    return yaml.safe_load((CONFIG_DIR / "short_term.yaml").read_text())
+
+
+def _read_json(path: str) -> dict:
+    import json
+    from pathlib import Path
+    f = Path(path)
+    return json.loads(f.read_text()) if f.exists() else {}
+
+
+def _alerts(r: dict) -> list[dict]:
+    """Plain-language short-term alerts for one name-day. `signal` links each alert to
+    its data point, so the page can show whether that data point paid in our tests."""
+    a = []
+    g = lambda k: (None if r.get(k) is None or pd.isna(r.get(k)) else float(r[k]))   # noqa: E731
+    if (g("offering_fresh") or 0) > 0:
+        a.append({"signal": "offering_fresh", "text": "offering filed", "tone": "bad"})
+    if (g("distress_fresh") or 0) > 0:
+        a.append({"signal": "distress_fresh", "text": "distress filing", "tone": "bad"})
+    if g("earnings_fresh") is not None:
+        a.append({"signal": "earnings_fresh", "text": f"earnings reaction {g('earnings_fresh') * 100:+.1f}%",
+                  "tone": "good" if g("earnings_fresh") > 0 else "bad"})
+    if (g("insider_buy_fresh") or 0) > 0:
+        a.append({"signal": "insider_buy_fresh", "text": f"insider buying ${math.expm1(g('insider_buy_fresh')) / 1e3:,.0f}K",
+                  "tone": "good"})
+    if abs(g("gap") or 0) >= 0.05:
+        a.append({"signal": "gap", "text": f"gapped {g('gap') * 100:+.1f}%", "tone": "info"})
+    if abs(g("ret_1d") or 0) >= 0.08:
+        a.append({"signal": "ret_1d", "text": f"moved {g('ret_1d') * 100:+.1f}% today", "tone": "info"})
+    if (g("rel_volume") or 0) >= 3:
+        a.append({"signal": "rel_volume", "text": f"volume {g('rel_volume'):.1f}x normal", "tone": "info"})
+    if (g("news_spike") or 0) >= math.log(3):
+        a.append({"signal": "news_spike", "text": "news spike", "tone": "info"})
+    if (g("wiki_spike") or 0) >= math.log(3):
+        a.append({"signal": "wiki_spike", "text": "attention spike", "tone": "info"})
+    return a
+
+
+def short_term_overview(con) -> dict:
+    """Daily + intraday scorecards and their track records (for the Today tab and the lab)."""
+    v = _read_json(f"{SIG}/daily/validation.json")
+    out = {"daily": {}, "intraday": {}}
+    if v:
+        ic = _q(con, f"""SELECT date_trunc('month', d) AS m, signal, horizon, avg(ic) AS ic, count(*) AS n
+                         FROM read_parquet('{SIG}/daily/ic_daily.parquet') GROUP BY ALL ORDER BY m""")
+        series = {}
+        for (s, h), g in ic.groupby(["signal", "horizon"]):
+            series.setdefault(s, {})[h] = [{"m": str(r.m)[:10], "k": (pd.Timestamp(r.m) + pd.DateOffset(months=1, days=7)).isoformat() + "Z",
+                                            "ic": None if pd.isna(r.ic) else round(float(r.ic), 4)} for r in g.itertuples()]
+        cd = _q(con, f"SELECT * FROM read_parquet('{SIG}/daily/composite_daily.parquet') ORDER BY d")
+        comp = {}
+        for h, g in cd.groupby("horizon"):
+            g = g.dropna(subset=["ic"]).copy()
+            hv = (v.get("horizons") or {}).get(h, 1)
+            g = g.iloc[::max(int(hv), 1)]                     # non-overlapping holding periods
+            g["net"] = g["q5"] - g["q5_cost"]
+            g["cum_gross"] = (1 + g["q5"]).cumprod() - 1
+            g["cum_net"] = (1 + g["net"]).cumprod() - 1
+            w = g.set_index("d").resample("W").last().dropna(subset=["cum_net"])
+            comp[h] = [{"d": str(i)[:10], "k": (i + pd.Timedelta(days=7)).isoformat() + "Z",
+                        "cum_gross": round(float(r.cum_gross), 5), "cum_net": round(float(r.cum_net), 5)}
+                       for i, r in w.iterrows()]
+        days = _q(con, f"SELECT DISTINCT CAST(d AS DATE) AS d FROM read_parquet('{SIG}/daily/scores.parquet') ORDER BY 1")
+        out["daily"] = {**v, "ic_series": series, "composite_series": comp, "days": [str(x)[:10] for x in days["d"]]}
+    from pathlib import Path
+    idir = Path(SIG) / "intraday"
+    if idir.exists():
+        for tf in sorted(p.name for p in idir.iterdir() if (p / "validation.json").exists()):
+            iv = _read_json(f"{SIG}/intraday/{tf}/validation.json")
+            ic = _q(con, f"""SELECT date_trunc('week', day) AS w, signal, avg(ic) AS ic FROM read_parquet('{SIG}/intraday/{tf}/daily_ic.parquet')
+                             WHERE horizon = ? GROUP BY ALL ORDER BY w""", [iv.get("primary_horizon")])
+            iv["ic_series"] = {s: [{"w": str(r.w)[:10], "k": (pd.Timestamp(r.w) + pd.Timedelta(days=7)).isoformat() + "Z",
+                                    "ic": None if pd.isna(r.ic) else round(float(r.ic), 4)} for r in g.itertuples()]
+                               for s, g in ic.groupby("signal")}
+            out["intraday"][tf] = iv
+    return out
+
+
+def short_term_day(con, day: str, limit: int = 300) -> dict:
+    """The Today view: for the latest trading day on or before `day`, screened names with
+    short-term data points, the short-term composite, plain-language alerts, the daily
+    range (for stops/sizing) and the monthly verdict for context."""
+    from ..db.pit import AsOf
+    days = _q(con, f"""SELECT max(CAST(d AS DATE)) AS d FROM read_parquet('{SIG}/daily/scores.parquet')
+                       WHERE CAST(d AS DATE) <= CAST(? AS DATE)""", [day[:10]])
+    if days.empty or days["d"].iloc[0] is None or pd.isna(days["d"].iloc[0]):
+        return {"day": None, "rows": []}
+    d = str(days["d"].iloc[0])[:10]
+    sc = _q(con, f"SELECT * FROM read_parquet('{SIG}/daily/scores.parquet') WHERE CAST(d AS DATE) = CAST(? AS DATE)", [d])
+    t = pd.Timestamp(d) + pd.Timedelta(hours=21, minutes=30)
     with AsOf(con, t) as db:
         trad = set(db.tradable()["cik"].astype(int))
     universe_n = len(sc)
     sc = sc[sc["cik"].astype(int).isin(trad)]
     names = _q(con, "SELECT cik, name, current_tickers[1] AS ticker FROM companies")
     sc = sc.merge(names, on="cik", how="left")
+    # monthly verdict known on this day (latest month-end before it)
+    mm = _q(con, f"""SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE CAST(d AS DATE) = (
+                     SELECT max(CAST(d AS DATE)) FROM read_parquet('{SIG}/scores.parquet') WHERE CAST(d AS DATE) <= CAST(? AS DATE))""", [d])
+    proven = _proven_avoid()
+    monthly = {int(r["cik"]): {"pct": None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1),
+                               "flags": _flags(r, proven)} for r in mm.to_dict(orient="records")}
+    cfg = _short_cfg()["daily"]["signals"]
+    val = {s["signal"]: s for s in (_read_json(f"{SIG}/daily/validation.json").get("signals") or [])}
+    keys = list(cfg)
     rows = []
-    for r in sc.sort_values("composite", ascending=False).itertuples(index=False):
-        d = r._asdict()
-        flags = [lab for s, lab in AVOID_RULES.items()
-                 if f"{s}__pct" in d and d[f"{s}__pct"] is not None and not pd.isna(d[f"{s}__pct"])
-                 and d[f"{s}__pct"] <= (5 if s in ("going_concern", "late_filings_12m") else 10)
-                 and not (s in ("going_concern", "late_filings_12m", "offerings_12m") and (d.get(s) or 0) == 0)]
-        rows.append({"cik": int(r.cik), "ticker": d.get("ticker"), "name": d.get("name"), "industry": d.get("industry"),
-                     "composite_pct": None if pd.isna(d.get("composite__pct")) else round(float(d["composite__pct"]), 1),
-                     "pct": {s: (None if pd.isna(d.get(f"{s}__pct")) else round(float(d[f"{s}__pct"]), 1))
-                             for s in [x["signal"] for x in v["signals"]] if f"{s}__pct" in d},
-                     "flags": flags, "price": d.get("price_raw"), "dollar_vol": d.get("dollar_vol_20d"),
-                     "mcap": d.get("mcap")})
-    return {"month": month[:10], "k": (t + pd.Timedelta(minutes=1)).isoformat() + "Z", "used": used,
-            "universe_n": universe_n, "tradable_n": len(rows), "rows": _records(pd.DataFrame(rows))[:limit]}
+    for r in sc.sort_values("composite", ascending=False, na_position="last").to_dict(orient="records"):
+        al = _alerts(r)
+        for x in al:
+            vv = val.get(x["signal"], {})
+            x["status"], x["pays"] = vv.get("status"), vv.get("pays_after_costs")
+        m = monthly.get(int(r["cik"]))
+        rows.append({"cik": int(r["cik"]), "ticker": r.get("ticker"), "name": r.get("name"), "industry": r.get("industry"),
+                     "composite_pct": None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1),
+                     "values": {k: (None if pd.isna(r.get(k)) else float(r[k])) for k in keys},
+                     "pct": {k: (None if pd.isna(r.get(f"{k}__pct")) else round(float(r[f"{k}__pct"]), 1)) for k in keys},
+                     "alerts": al, "avoid": any(x["tone"] == "bad" for x in al) or bool(m and m["flags"]),
+                     "monthly": m, "price": r.get("price_raw"), "dollar_vol": r.get("dollar_vol"),
+                     "cost_bps": None if pd.isna(r.get("cost_rt")) else round(float(r["cost_rt"]) * 1e4, 1),
+                     "atr_pct": None if pd.isna(r.get("atr_pct")) else float(r["atr_pct"])})
+    return {"day": d, "k": t.isoformat(), "universe_n": universe_n, "tradable_n": len(rows),
+            "rows": _records(pd.DataFrame(rows))[:limit] if rows else []}
+
+
+def company_short_term(con, cik: int) -> dict:
+    """Recent short-term scores for one company (daily) and its latest intraday bars."""
+    from pathlib import Path
+    out = {"daily": [], "intraday": {}}
+    f = Path(SIG) / "daily" / "scores.parquet"
+    keys = list(_short_cfg()["daily"]["signals"])
+    if f.exists():
+        df = _q(con, f"SELECT * FROM read_parquet('{SIG}/daily/scores.parquet') WHERE cik = ? ORDER BY d", [int(cik)])
+        for r in df.to_dict(orient="records"):
+            out["daily"].append({"d": str(r["d"])[:10], "k": (pd.Timestamp(r["d"]) + pd.Timedelta(hours=21, minutes=30)).isoformat() + "Z",
+                                 "composite_pct": None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1),
+                                 "atr_pct": None if pd.isna(r.get("atr_pct")) else float(r["atr_pct"]),
+                                 "cost_bps": None if pd.isna(r.get("cost_rt")) else round(float(r["cost_rt"]) * 1e4, 1),
+                                 "alerts": [x["text"] for x in _alerts(r)],
+                                 "pct": {k: (None if pd.isna(r.get(f"{k}__pct")) else round(float(r[f"{k}__pct"]), 1)) for k in keys}})
+    idir = Path(SIG) / "intraday"
+    for tf in ("1Hour", "15Min"):
+        p = idir / tf / "recent.parquet"
+        if p.exists():
+            df = _q(con, f"SELECT * FROM read_parquet('{p.as_posix()}') WHERE cik = ? ORDER BY ts", [int(cik)])
+            if len(df):
+                out["intraday"][tf] = [{"ts": str(r["ts"])[:16], "k": pd.Timestamp(r["ts"]).tz_localize("America/New_York").tz_convert("UTC").isoformat(),
+                                        "close": float(r["close"]), "volume": float(r["volume"]),
+                                        "composite_pct": None if pd.isna(r.get("composite__pct")) else round(float(r["composite__pct"]), 1),
+                                        "vwap_dist": None if pd.isna(r.get("vwap_dist")) else float(r["vwap_dist"]),
+                                        "rel_vol_tod": None if pd.isna(r.get("rel_vol_tod")) else float(r["rel_vol_tod"])}
+                                       for r in df.to_dict(orient="records")]
+    return out
 
 
 def company_signals(con, cik: int) -> list[dict]:

@@ -1,4 +1,5 @@
-"""Alpaca market data (free account): asset list incl. delisted, daily bars since 2016.
+"""Alpaca market data (free account): asset list incl. delisted, daily and intraday
+(minute/hour) bars since 2016 (SIP feed; the free plan cannot query the last 15 minutes).
 
 Credentials come from the environment (APCA_API_KEY_ID / APCA_API_SECRET_KEY)
 or from ~/.config/ddb/alpaca.env. Never put them in the repo.
@@ -39,10 +40,12 @@ class Alpaca:
             out.append(pd.DataFrame(r.json()))
         return pd.concat(out, ignore_index=True)
 
-    def daily_bars(self, symbols: list[str], start: str, end: str | None = None,
-                   adjustment: str = "raw") -> pd.DataFrame:
-        """adjustment='raw' = as traded; 'split' = split-adjusted."""
-        params = {"symbols": ",".join(symbols), "timeframe": "1Day", "start": start,
+    def bars(self, symbols: list[str], timeframe: str, start: str, end: str | None = None,
+             adjustment: str = "raw") -> pd.DataFrame:
+        """Bars for several symbols. timeframe: 1Min, 5Min, 15Min, 1Hour, 1Day.
+        adjustment='raw' = as traded; 'split' = split-adjusted.
+        Returns symbol, t (bar START, UTC), open, high, low, close, volume, vwap, trades."""
+        params = {"symbols": ",".join(symbols), "timeframe": timeframe, "start": start,
                   "adjustment": adjustment, "feed": "sip", "limit": 10000}
         if end:
             params["end"] = end
@@ -57,7 +60,13 @@ class Alpaca:
                 break
             params["page_token"] = tok
         df = pd.DataFrame(rows, columns=["symbol", "t", "open", "high", "low", "close", "volume", "vwap", "trades"])
-        if not df.empty:
-            df["date"] = pd.to_datetime(df["t"], utc=True).dt.tz_convert("America/New_York").dt.tz_localize(None).dt.normalize()
-            df = df.drop(columns="t")
+        df["t"] = pd.to_datetime(df["t"], utc=True)
         return df
+
+    def daily_bars(self, symbols: list[str], start: str, end: str | None = None,
+                   adjustment: str = "raw") -> pd.DataFrame:
+        """adjustment='raw' = as traded; 'split' = split-adjusted."""
+        df = self.bars(symbols, "1Day", start, end, adjustment)
+        if not df.empty:
+            df["date"] = df["t"].dt.tz_convert("America/New_York").dt.tz_localize(None).dt.normalize()
+        return df.drop(columns="t")

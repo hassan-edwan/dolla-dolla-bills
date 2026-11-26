@@ -1,7 +1,8 @@
 """Export a self-contained dashboard snapshot (one HTML file, data embedded).
 
-Includes overview, universe, screens, every industry, all model runs and
-decisions, and a selection of companies: those in model decisions, the
+Includes overview, universe, screens, every industry, the monthly decision
+view for the last 36 month-ends, the short-term (Today) view for the last
+`--short-term-days` trading days, all model runs and decisions, and a selection of companies: those in model decisions, the
 configured candidates, and the monitored list. Per-company lists are capped to
 keep the file small. The as-of control still works: the data carries public
 timestamps.
@@ -26,6 +27,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=str(DATA_DIR / "results" / "dashboard.html"))
     ap.add_argument("--max-companies", type=int, default=120)
+    ap.add_argument("--short-term-days", type=int, default=60, help="trading days of the Today view to include")
     ap.add_argument("--artifact", help="write a publishable page + per-view data files into this directory")
     a = ap.parse_args()
     con = connect(DATA_DIR / "ddb.duckdb")
@@ -40,6 +42,10 @@ def main():
     snap["/signals"] = sig
     for m in (sig.get("months") or [])[-36:]:          # ranked candidates for the last 3 years of month-ends
         snap[f"/signal_month/{m}"] = Q.signal_month(con, m)
+    st = Q.short_term_overview(con)
+    snap["/short_term"] = st
+    for d in (st.get("daily", {}).get("days") or [])[-a.short_term_days:]:   # Today view for recent trading days
+        snap[f"/short_term_day/{d}"] = Q.short_term_day(con, d)
     runs = Q.runs(con)
     snap["/runs"] = runs
     dec_ciks = []
@@ -59,6 +65,8 @@ def main():
             continue
         for key, cap in CAPS.items():
             c[key] = c.get(key, [])[:cap]
+        if c.get("short_term"):
+            c["short_term"]["daily"] = c["short_term"]["daily"][-260:]
         # Snapshot only: weekly prices from 2015, 4 significant figures, short timestamps.
         c["prices"] = [{"w": p["w"][:10], "k": (p["k"] or "")[:19] + "Z",
                         "close": float(f"{p['close']:.4g}") if p.get("close") is not None else None,

@@ -117,6 +117,24 @@ def signal_month(month: str):
         con.close()
 
 
+@app.get("/api/short_term")
+def short_term():
+    con = _con()
+    try:
+        return _json(Q.short_term_overview(con))
+    finally:
+        con.close()
+
+
+@app.get("/api/short_term_day/{day}")
+def short_term_day(day: str):
+    con = _con()
+    try:
+        return _json(Q.short_term_day(con, day))
+    finally:
+        con.close()
+
+
 @app.get("/api/runs")
 def runs():
     con = _con()

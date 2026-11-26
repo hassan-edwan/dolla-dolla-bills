@@ -65,6 +65,14 @@ class MarketView:
         row = self._data.close.iloc[self._i]
         return list(row.index[row.notna()])
 
+    def bars_left_in_session(self) -> int:
+        """Bars still to come today after this one (intraday data; 0 on daily data).
+        An order decided now fills at the next bar's open, so to be flat at the close
+        a strategy must sell while this is >= 1."""
+        if not hasattr(self._data, "_pos_from_end"):
+            self._data._pos_from_end = _session_helpers(self._data.calendar)[3]
+        return int(self._data._pos_from_end[self._i])
+
     def is_period_end(self, freq: str) -> bool:
         """True on the last trading day of the week ('W'), month ('M') or quarter ('Q').
 
@@ -75,7 +83,7 @@ class MarketView:
             return True
         a, b = cal[self._i], cal[self._i + 1]
         if freq == "D":
-            return True
+            return a.normalize() != b.normalize()
         if freq == "W":
             return a.isocalendar()[:2] != b.isocalendar()[:2]
         if freq == "M":
@@ -83,6 +91,15 @@ class MarketView:
         if freq == "Q":
             return (a.year, a.quarter) != (b.year, b.quarter)
         raise ValueError(freq)
+
+
+def _session_helpers(cal: pd.DatetimeIndex):
+    days = cal.normalize()
+    first = np.r_[True, days[1:] != days[:-1]]
+    last = np.r_[days[1:] != days[:-1], True]
+    # bars left in the session after bar i (0 on the last bar)
+    pos_from_end = pd.Series(1, index=range(len(cal))).groupby(days.to_numpy()).cumcount(ascending=False).to_numpy()
+    return days, first, last, pos_from_end
 
 
 @dataclass
@@ -112,6 +129,10 @@ class SimSettings:
     short_term_tax_rate: float = 0.32
     long_term_tax_rate: float = 0.15
     pay_taxes: bool = True        # pay prior year's tax on the first trading day of each year
+    # Intraday bars (minute / hour): the calendar holds bar END times. Settlement and
+    # good-faith rules count trading DAYS, liquidity comes from prior sessions only,
+    # and only a fill at the session's first bar pays the wider opening spread.
+    intraday: bool = False
 
     @classmethod
     def from_config(cls, cfg: dict) -> "SimSettings":
@@ -167,13 +188,29 @@ class Backtester:
         self.failures = failures or FailureLedger()
         self.rng = np.random.default_rng(self.s.seed)
         dollar_vol = data.close * data.volume
-        self.adv = dollar_vol.rolling(20, min_periods=1).mean()
-        self.vol = data.close.pct_change(fill_method=None).rolling(20, min_periods=2).std()
+        if self.s.intraday:
+            days, self._first_bar, _, _ = _session_helpers(data.calendar)
+            daily_dv = dollar_vol.groupby(days.to_numpy()).sum(min_count=1)
+            daily_close = data.close.groupby(days.to_numpy()).last()
+            # prior sessions only: today's volume isn't known until the close
+            self.adv = daily_dv.rolling(20, min_periods=1).mean().shift(1).reindex(days).set_axis(data.calendar)
+            self.vol = (daily_close.pct_change(fill_method=None).rolling(20, min_periods=2).std().shift(1)
+                        .reindex(days).set_axis(data.calendar))
+            self._sessions = days.unique()
+        else:
+            self.adv = dollar_vol.rolling(20, min_periods=1).mean()
+            self.vol = data.close.pct_change(fill_method=None).rolling(20, min_periods=2).std()
         self.mark = data.close.ffill()
         self._last_valid = {s: data.last_valid_date(s) for s in data.symbols}
 
     def _settle_date(self, i: int) -> pd.Timestamp:
         cal = self.data.calendar
+        if self.s.intraday:   # T+n counts trading days; cash is usable from that day's open
+            day = cal[i].normalize()
+            j = int(self._sessions.searchsorted(day)) + self.s.settlement_days
+            if j < len(self._sessions):
+                return self._sessions[j]
+            return self._sessions[-1] + pd.offsets.BDay(j - len(self._sessions) + 1)
         j = i + self.s.settlement_days
         if j < len(cal):
             return cal[j]
@@ -334,8 +371,8 @@ class Backtester:
                 qty = math.copysign(math.floor(abs(qty)), qty)
             if abs(qty) < 1e-9:
                 return None
-            slip = self.costs.slippage_frac(abs(qty) * ref, a, float(vol.get(sym, np.nan)),
-                                            at_open=self.s.fill == "open")
+            at_open = self.s.fill == "open" and (not self.s.intraday or bool(self._first_bar[i]))
+            slip = self.costs.slippage_frac(abs(qty) * ref, a, float(vol.get(sym, np.nan)), at_open=at_open)
             return qty, ref, slip
 
         for sym, qty in orders.items():

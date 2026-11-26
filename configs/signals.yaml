@@ -3,6 +3,7 @@
 #   sign: expected direction (+1 = higher value -> higher future return)
 #   family: price | fundamental | event | insider | alternative
 #   prior: what the published evidence says (filled in from the research report)
+#   question: which decision question it answers on the dashboard (see `questions` below)
 signals:
   mom_12_1:
     family: price
@@ -11,6 +12,7 @@ signals:
     desc: Return from 12 months to 1 month ago
     prior: works, cost-sensitive; crashes
     role: pick
+    question: trend
   ind_mom:
     family: price
     sign: 1
@@ -18,6 +20,7 @@ signals:
     desc: Average 12-1 momentum of the company's industry
     prior: works in older studies; not re-checked
     role: pick
+    question: trend
   high_52w:
     family: price
     sign: 1
@@ -25,6 +28,7 @@ signals:
     desc: Price / highest close of the past year
     prior: mixed; not re-checked
     role: pick
+    question: trend
   rev_1m:
     family: price
     sign: -1
@@ -32,6 +36,7 @@ signals:
     desc: Last month's return; short-term losers tend to bounce
     prior: works gross at 1 month; costly turnover
     role: pick
+    question: trend
   vol_60d:
     family: price
     sign: -1
@@ -39,6 +44,7 @@ signals:
     desc: Std. dev. of daily returns, 60 days
     prior: 'short-leg only: avoid high-volatility names'
     role: avoid
+    question: speculation
   max_ret_21d:
     family: price
     sign: -1
@@ -46,6 +52,7 @@ signals:
     desc: Largest daily return last month
     prior: 'short-leg only: avoid lottery stocks'
     role: avoid
+    question: speculation
   amihud:
     family: price
     sign: 1
@@ -53,6 +60,7 @@ signals:
     desc: Avg |return| per $ traded, 60 days
     prior: liquidity premium mostly eaten by costs
     role: context
+    question: speculation
   size:
     family: price
     sign: -1
@@ -60,6 +68,7 @@ signals:
     desc: Smaller firms
     prior: weak after costs
     role: context
+    question: speculation
   book_to_market:
     family: fundamental
     sign: 1
@@ -67,6 +76,7 @@ signals:
     desc: Equity / market cap
     prior: near zero / negative since 2015 (value-weighted)
     role: context
+    question: business
   sales_to_price:
     family: fundamental
     sign: 1
@@ -74,6 +84,7 @@ signals:
     desc: Annual revenue / market cap
     prior: best valuation ranker for loss-making firms
     role: pick
+    question: business
   gross_prof:
     family: fundamental
     sign: 1
@@ -81,6 +92,7 @@ signals:
     desc: Gross profit / total assets (Novy-Marx)
     prior: works since 2015 (0.94%/mo ex-microcaps, t 3.2); real long leg
     role: pick
+    question: business
   op_cf_assets:
     family: fundamental
     sign: 1
@@ -88,6 +100,7 @@ signals:
     desc: Operating cash flow / total assets
     prior: profitability family; real long leg
     role: pick
+    question: business
   asset_growth:
     family: fundamental
     sign: -1
@@ -95,6 +108,7 @@ signals:
     desc: Total assets vs a year earlier
     prior: weak since 2015; short-leg only
     role: avoid
+    question: business
   accruals:
     family: fundamental
     sign: -1
@@ -102,6 +116,7 @@ signals:
     desc: (Net income − operating cash flow) / assets
     prior: dead since 2015
     role: context
+    question: business
   net_issuance:
     family: fundamental
     sign: -1
@@ -109,6 +124,7 @@ signals:
     desc: Change in shares outstanding over a year
     prior: 'works (t 2.8) but mostly short leg: avoid diluters'
     role: avoid
+    question: distress
   cash_runway:
     family: fundamental
     sign: 1
@@ -116,6 +132,7 @@ signals:
     desc: Cash / annual operating cash burn (capped; profitable = max)
     prior: no published test
     role: context
+    question: business
   sue:
     family: event
     sign: 1
@@ -123,6 +140,7 @@ signals:
     desc: Quarterly EPS vs same quarter last year, scaled
     prior: weak after 2006 outside microcaps
     role: context
+    question: business
   ear:
     family: event
     sign: 1
@@ -130,6 +148,7 @@ signals:
     desc: 3-day market-adjusted return around the latest results 8-K
     prior: works since 2015 (0.40-0.79%/mo); real long leg
     role: pick
+    question: trend
   offerings_12m:
     family: event
     sign: -1
@@ -137,6 +156,7 @@ signals:
     desc: Shelf/prospectus filings in the past year
     prior: 'issuance/financing family: avoid'
     role: avoid
+    question: distress
   late_filings_12m:
     family: event
     sign: -1
@@ -144,6 +164,7 @@ signals:
     desc: NT 10-K/10-Q notices in the past year
     prior: no published test (distress proxy)
     role: avoid
+    question: distress
   going_concern:
     family: event
     sign: -1
@@ -151,6 +172,7 @@ signals:
     desc: Filing mentions substantial doubt about continuing (1y)
     prior: no published test (distress proxy)
     role: avoid
+    question: distress
   insider_opp_net:
     family: insider
     sign: 1
@@ -158,6 +180,7 @@ signals:
     desc: Non-routine open-market buys minus sales, 90d, / market cap
     prior: real but short-lived (1-5 days after filing)
     role: pick
+    question: flows
   insider_buyers:
     family: insider
     sign: 1
@@ -165,6 +188,7 @@ signals:
     desc: Distinct insiders with open-market buys, 90d
     prior: no extra effect from clusters
     role: context
+    question: flows
   congress_net:
     family: alternative
     sign: 1
@@ -172,6 +196,7 @@ signals:
     desc: Disclosed buys minus sells, 180d
     prior: does not work from disclosure date
     role: context
+    question: flows
   contracts_rev:
     family: alternative
     sign: 1
@@ -179,6 +204,7 @@ signals:
     desc: Federal obligations, 12m, / revenue
     prior: announcement-day only; weak
     role: context
+    question: flows
   news_volume:
     family: alternative
     sign: 1
@@ -186,6 +212,7 @@ signals:
     desc: log articles naming the company
     prior: 'attention: short-term pressure then reversal'
     role: context
+    question: flows
   news_tone:
     family: alternative
     sign: 1
@@ -193,6 +220,7 @@ signals:
     desc: Average GDELT tone
     prior: moves prices for days, then reverses
     role: context
+    question: flows
   wiki_attention:
     family: alternative
     sign: 1
@@ -200,6 +228,7 @@ signals:
     desc: Views last 30d vs prior 180d
     prior: weak; spike after run-up is a warning
     role: context
+    question: flows
   bottleneck_1y:
     family: alternative
     sign: -1
@@ -207,6 +236,7 @@ signals:
     desc: Supply-constraint phrases in filings
     prior: no published test
     role: context
+    question: flows
   resid_mom:
     family: price
     sign: 1
@@ -214,6 +244,7 @@ signals:
     desc: 12-1 momentum of returns net of the market, scaled by residual volatility (Blitz-Huij-Martens)
     prior: works; about 2x the Sharpe of raw momentum
     role: pick
+    question: trend
   seasonality:
     family: price
     sign: 1
@@ -221,6 +252,7 @@ signals:
     desc: Average return in this calendar month in prior years (Heston-Sadka)
     prior: works gross (Heston-Sadka); needs history
     role: pick
+    question: trend
   days_to_cover:
     family: event
     sign: -1
@@ -228,6 +260,7 @@ signals:
     desc: Shares sold short / average daily volume (FINRA, by publication date)
     prior: 'works (1.19%/mo EW 1988-2012), short leg: avoid crowded shorts'
     role: avoid
+    question: speculation
   short_pct:
     family: event
     sign: -1
@@ -235,3 +268,14 @@ signals:
     desc: Shares sold short / shares outstanding
     prior: 'works, short leg: avoid'
     role: avoid
+    question: speculation
+
+# The questions the dashboard asks before a long position. Signals are grouped
+# under these instead of by data source. kind: good = high is favorable;
+# risk = a validated avoid signal here raises a red flag.
+questions:
+  business:    {label: "Is it a real business?", kind: good}
+  trend:       {label: "Is the market confirming it?", kind: good}
+  distress:    {label: "Could it fail or dilute?", kind: risk}
+  speculation: {label: "Is it a lottery ticket?", kind: risk}
+  flows:       {label: "Who is buying and watching?", kind: good}

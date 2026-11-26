@@ -1,0 +1,173 @@
+# Short-term data points: daily (swing / next-day) and intraday (minute, hour).
+#
+# Same rules as the monthly signals (configs/signals.yaml):
+# - Each value uses only bars that had CLOSED by the decision time.
+# - A decision at the end of bar i fills at the OPEN of bar i+1, never at bar i's close.
+# - Every data point is tested on our own universe against forward returns, and
+#   AFTER trading costs (sim.yaml spread tiers; the open costs more), because
+#   short-horizon edges are small and costs eat most of them.
+#
+#   sign: expected direction (+1 = higher value -> higher forward return)
+#   role: pick | avoid | context | risk (risk = sizing/stops, not ranked)
+#   prior: what the published evidence says
+
+daily:
+  start: "2012-01-01"
+  horizons: {fwd_1d: 1, fwd_5d: 5}     # open(t+1) -> close(t+h)
+  primary_horizon: fwd_1d
+  keep_scores_days: 520                # trading days of per-name scores kept for the dashboard
+  fresh_days: 5                        # "fresh" event window, trading days
+  liquidity: {min_price: 2.0, min_dollar_volume_20d: 1_000_000}
+  signals:
+    ret_1d:
+      sign: -1
+      label: Yesterday's move (reversal)
+      desc: Close-to-close return on the decision day
+      prior: short-term reversal; strongest in illiquid names, mostly eaten by costs
+      role: pick
+    ret_5d:
+      sign: -1
+      label: 5-day move (reversal)
+      desc: Return over the last 5 trading days
+      prior: weekly reversal (Lehmann 1990); weaker since 2000s, cost-sensitive
+      role: pick
+    gap:
+      sign: -1
+      label: Opening gap
+      desc: Open / previous close - 1 on the decision day
+      prior: overnight gaps partly reverse intraday; large-cap evidence
+      role: context
+    rel_volume:
+      sign: 1
+      label: Volume surge
+      desc: Volume / 20-day average volume
+      prior: high-volume return premium (Gervais-Kaniel-Mingelgrin 2001)
+      role: pick
+    close_loc:
+      sign: 1
+      label: Close near the day's high
+      desc: (close - low) / (high - low)
+      prior: mixed; practitioner signal
+      role: context
+    breakout_20d:
+      sign: 1
+      label: 20-day breakout
+      desc: Close / highest close of the prior 20 days
+      prior: short-term trend (George-Hwang, shorter window untested)
+      role: pick
+    atr_pct:
+      sign: -1
+      label: Daily range (ATR %)
+      desc: 14-day average true range / close. Used to size positions and set stops
+      prior: high-volatility names underperform; mainly a risk measure
+      role: risk
+    earnings_fresh:
+      sign: 1
+      label: Fresh earnings reaction
+      desc: Market-adjusted 3-day return around results filed in the last 5 trading days
+      prior: post-earnings drift is strongest in the first days
+      role: pick
+    offering_fresh:
+      sign: -1
+      label: New offering filed
+      desc: Shelf registrations / prospectuses public in the last 5 trading days
+      prior: announcement-window drop for equity issues
+      role: avoid
+    distress_fresh:
+      sign: -1
+      label: New distress filing
+      desc: Going-concern language or a late-filing notice public in the last 5 trading days
+      prior: distress news drifts down
+      role: avoid
+    insider_buy_fresh:
+      sign: 1
+      label: Fresh insider buying
+      desc: Opportunistic open-market insider buys disclosed in the last 5 trading days (log $)
+      prior: real but short-lived (1-5 days after the filing)
+      role: pick
+    news_spike:
+      sign: -1
+      label: News spike
+      desc: Articles in the last 2 days vs the prior 30-day daily average (log ratio)
+      prior: attention-driven buying, then reversal (Barber-Odean)
+      role: context
+    wiki_spike:
+      sign: -1
+      label: Attention spike
+      desc: Wikipedia views yesterday vs the prior 30-day average (log ratio)
+      prior: attention spikes after run-ups precede reversals
+      role: context
+
+intraday:
+  # Raw 1-minute bars from Alpaca (free account, SIP feed, 2016+), regular session only.
+  source_timeframe: 1Min
+  start: "2019-01-01"
+  regular_session_only: true
+  # Which symbols to download: liquid names in tracked industries (from the monthly
+  # signal universe) plus the configured candidates, safe havens and benchmarks.
+  min_dollar_volume_20d: 5_000_000
+  max_symbols: 600
+  # Bar sizes the data points are tested on. Minute bars are kept for learning;
+  # testing every minute across hundreds of names is slow, so validation samples them.
+  timeframes:
+    1Min:  {horizons: {fwd_5b: 5, fwd_15b: 15},  short: 5,  long: 30, validate_every: 5}
+    5Min:  {horizons: {fwd_1b: 1, fwd_6b: 6},    short: 3,  long: 12, validate_every: 1}
+    15Min: {horizons: {fwd_1b: 1, fwd_4b: 4},    short: 2,  long: 8,  validate_every: 1}
+    1Hour: {horizons: {fwd_1b: 1, fwd_close: close}, short: 1, long: 3, validate_every: 1}
+  validate_months: 24                  # most recent months used for the test
+  liquidity: {min_price: 2.0}
+  signals:
+    ret_bar:
+      sign: -1
+      label: Last bar's move
+      desc: Return of the bar that just closed
+      prior: bid-ask bounce and short-lived reversal at 1-5 minutes
+      role: pick
+    ret_short:
+      sign: 1
+      label: Short-window trend
+      desc: Return over the last `short` bars
+      prior: intraday momentum in the last half hour (Gao-Han-Li-Zhou 2018) is the strongest known case
+      role: pick
+    ret_long:
+      sign: 1
+      label: Long-window trend
+      desc: Return over the last `long` bars (within the session)
+      prior: mixed
+      role: pick
+    ret_open:
+      sign: 1
+      label: Move since the open
+      desc: Close / session open - 1
+      prior: first-half-hour return predicts the last half hour (Gao et al. 2018)
+      role: pick
+    vwap_dist:
+      sign: -1
+      label: Distance from VWAP
+      desc: Close / session VWAP - 1 (stretched above VWAP = rich)
+      prior: practitioner mean-reversion anchor; little published evidence
+      role: pick
+    rel_vol_tod:
+      sign: 1
+      label: Volume vs normal for this time
+      desc: Bar volume / average volume of the same bar over the prior 20 sessions
+      prior: volume spikes accompany information; direction unclear
+      role: context
+    range_pos:
+      sign: 1
+      label: Position in today's range
+      desc: (close - session low) / (session high - session low)
+      prior: mixed
+      role: context
+    gap:
+      sign: -1
+      label: Today's opening gap
+      desc: Session open / previous session close - 1
+      prior: gaps partly fill intraday
+      role: context
+    bar_vol:
+      sign: -1
+      label: Intraday volatility
+      desc: Std. dev. of bar returns over the last `long` bars. Used for sizing and stops
+      prior: risk measure
+      role: risk
