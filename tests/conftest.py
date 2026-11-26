@@ -37,13 +37,20 @@ def synth(tmp_path_factory):
     from ddb.features import daily, panel, regime, validate
     from ddb.live import tracking
     from ddb.portfolio import model
+    from ddb.rl import dataset as rl_dataset, readiness, splits
     root = tmp_path_factory.mktemp("synth")
     db = make_db(root, n=40, start="2016-01-04", end="2019-12-31")
     sig = root / "db" / "signals"
     saved = {(panel, "OUT"): sig, (validate, "SIG_DIR"): sig, (daily, "OUT"): sig / "daily", (Q, "SIG"): sig.as_posix(),
              (regime, "OUT"): root / "db" / "regime", (regime, "SIG"): sig, (model, "OUT"): root / "db" / "portfolio",
              (model, "SIG"): sig, (model, "REGIME"): root / "db" / "regime" / "regime.parquet",
-             (tracking, "OUT"): root / "db" / "live", (tracking, "SIG"): sig}
+             (tracking, "OUT"): root / "db" / "live", (tracking, "SIG"): sig,
+             (rl_dataset, "OUT"): root / "db" / "rl", (rl_dataset, "SIG"): sig,
+             (rl_dataset, "REGIME"): root / "db" / "regime" / "regime.parquet",
+             (readiness, "DB"): root / "db", (readiness, "OUT"): root / "db" / "rl", (readiness, "DATA_DIR"): root,
+             (splits, "LOG"): root / "db" / "rl" / "test_access.log",
+             (splits, "OVERRIDE"): {"train": ["2017-01-01", "2018-06-30"], "validation": ["2018-07-01", "2019-03-31"],
+                                    "test": ["2019-04-01", "2019-12-31"], "embargo_days": 35}}
     old = {k: getattr(*k) for k in saved}
     for (mod, name), v in saved.items():
         setattr(mod, name, v)
@@ -56,6 +63,7 @@ def synth(tmp_path_factory):
         regime.build(db_path=db)
         model.build(db_path=db)
         tracking.build(db_path=db)
+        rl_dataset.build(db_path=db)
         yield root, db
     finally:
         os.chdir(cwd)

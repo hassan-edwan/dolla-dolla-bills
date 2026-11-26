@@ -617,7 +617,8 @@ def tracking_overview(con) -> dict:
     from pathlib import Path
     live = Path(SIG).parent / "live"
     return {"tracking": _read_json((live / "tracking.json").as_posix()),
-            "execution": _read_json((live / "execution.json").as_posix())}
+            "execution": _read_json((live / "execution.json").as_posix()),
+            "readiness": _read_json((Path(SIG).parent / "rl" / "readiness.json").as_posix())}
 
 
 def short_term_overview(con) -> dict:

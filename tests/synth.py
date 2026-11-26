@@ -58,6 +58,16 @@ def make_db(root: Path, n: int = 60, start: str = "2016-01-04", end: str = "2020
             "adjclose": c[:, j], "volume": vol[:, j], "close_raw": c[:, j], "volume_raw": vol[:, j],
             "source": "yahoo", "knowable_at": (days + pd.Timedelta(hours=21)).tz_localize("UTC"), "cik": np.nan,
             "vwap": np.nan}))
+    # safe-haven ETFs (no CIK): gold drifts up in the stress episode, T-bills creep up
+    for sym, mu, sd in (("GLD", 0.0002, 0.009), ("BIL", 0.00006, 0.0003)):
+        hr = rng.normal(mu, sd, T)
+        if sym == "GLD":
+            hr[T // 2 - 40:T // 2] += 0.003
+        hc = 100 * np.exp(np.cumsum(hr))
+        px.append(pd.DataFrame({"symbol": sym, "date": days.date, "open": hc, "high": hc * 1.002, "low": hc * 0.998,
+                                "close": hc, "adjclose": hc, "volume": 5e6, "close_raw": hc, "volume_raw": 5e6,
+                                "source": "yahoo", "knowable_at": (days + pd.Timedelta(hours=21)).tz_localize("UTC"),
+                                "cik": np.nan, "vwap": np.nan}))
     (root / "db" / "prices").mkdir(exist_ok=True)
     pd.concat(px).to_parquet(root / "db" / "prices" / "yahoo.parquet", index=False)
 

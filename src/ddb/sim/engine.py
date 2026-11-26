@@ -234,6 +234,20 @@ class Backtester:
         return (self.data.high.iat[i, c] + self.data.low.iat[i, c] + self.data.close.iat[i, c]) / 3
 
     def run(self, start=None, end=None) -> BacktestResult:
+        """Run the strategy from start to end (inclusive)."""
+        gen = self.iterate(start, end)
+        try:
+            view, pf = next(gen)
+            while True:
+                view, pf = gen.send(self.strategy.decide(view, pf))
+        except StopIteration as stop:
+            return stop.value
+
+    def iterate(self, start=None, end=None):
+        """The simulation as a generator, for callers that decide bar by bar (e.g. an RL
+        environment). At each bar's close it yields (MarketView, Portfolio); send back a
+        target-weight dict (or None to hold). Orders fill at the next bar. When the data
+        ends it returns the BacktestResult (StopIteration.value)."""
         cal = self.data.calendar
         i0 = 0 if start is None else int(cal.searchsorted(pd.Timestamp(start)))
         i1 = len(cal) - 1 if end is None else int(cal.searchsorted(pd.Timestamp(end), side="right")) - 1
@@ -290,7 +304,7 @@ class Backtester:
             if i == i1:
                 break
             pf = Portfolio(d, acct.cash, eq, pos, weights_log[d])
-            target = self.strategy.decide(MarketView(self.data, i), pf)
+            target = yield MarketView(self.data, i), pf
             if target is not None:
                 orders = self._orders_from_target(target, pos, eq, d)
                 decided_i = i

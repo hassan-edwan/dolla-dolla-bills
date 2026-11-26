@@ -36,23 +36,18 @@ export DDB_SEC_USER_AGENT="dolla-dolla-bills your-email@example.com"   # SEC req
 .venv/bin/python scripts/export_dashboard.py # one-file snapshot -> data/results/dashboard.html
 ```
 
-Build order after the database (each step reads the database; all free data):
+Build everything, in order, then check whether the data is ready for training:
 
 ```bash
-.venv/bin/python -m ddb.db.build_13f          # institutional holdings (SEC 13F data sets), optional
-.venv/bin/python -m ddb.features.panel         # monthly signal panel
-.venv/bin/python -m ddb.features.validate      # monthly tests + walk-forward composite
-.venv/bin/python -m ddb.features.daily         # next-day / 5-day data points, tested after costs
-.venv/bin/python -m ddb.db.build_macro         # FRED: VIX, credit spreads, yields
-.venv/bin/python -m ddb.features.regime        # market regime, daily
-.venv/bin/python -m ddb.portfolio.model        # model portfolio: sizes, risk, backtest after costs and tax
-.venv/bin/python -m ddb.live.tracking          # forecast log, signal decay, data freshness (run after every update)
-# optional, needs a free Alpaca key:
-.venv/bin/python -m ddb.db.build_intraday --max-symbols 100   # 1-minute bars (~1 minute per symbol-year)
-.venv/bin/python -m ddb.features.intraday      # minute/hour data points, tested after costs
-.venv/bin/python -m ddb.db.build_spreads       # measured bid-ask spreads (replace the tier estimate in costs)
-.venv/bin/python -m ddb.live.execution         # paper-trading fills vs the cost model
+export DDB_SEC_USER_AGENT="dolla-dolla-bills you@example.com"   # SEC requires contact info
+python scripts/build_all.py --download   # first run (SEC bulk files ~3 GB); later runs without --download
+python scripts/build_all.py --full       # also 13F, minute bars, spreads, congress, contracts, news (slow)
+python scripts/build_all.py --list       # the steps; --from <step> resumes
+python -m ddb.rl.readiness               # READY / NOT READY, with the fix for each blocker
 ```
+
+Alpaca steps (delisted prices, minute bars, spreads, paper fills) need a free key
+in `~/.config/ddb/alpaca.env`. Run `python -m ddb.live.tracking` after every update.
 
 Every view has an **as-of date**: it shows only information that was public by
 then, i.e. exactly what a model could see. The tabs follow the decision, not the
@@ -110,6 +105,8 @@ data source:
 | `configs/risk.yaml` | Regime thresholds, portfolio sizing, decay and freshness alerts |
 | `src/ddb/portfolio/` | Sizing and risk (`sizing.py`), model portfolio + backtest (`model.py`) |
 | `src/ddb/live/` | Forecast log, signal decay, data freshness (`tracking.py`); fills vs cost model (`execution.py`) |
+| `configs/rl.yaml` | Train / validation / test periods, RL dataset + environment, readiness thresholds |
+| `src/ddb/rl/` | Splits (`splits.py`), observation dataset (`dataset.py`), allocator environment (`env.py`), baselines, readiness report |
 | `src/ddb/news/` | News pipeline: GDELT, filing-text signals, Wikipedia attention, arXiv |
 | `src/ddb/app/` | Dashboard: API (`api.py`), queries, static frontend |
 | `src/ddb/decisions.py` | Decision record format every model must write (explainability + no-hindsight check) |

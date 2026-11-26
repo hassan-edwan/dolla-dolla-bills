@@ -1111,8 +1111,14 @@
   }
 
   async function vLabHealth(host) {
-    const tr = await trInfo(), F = (tr.tracking || {}).freshness || [];
-    host.innerHTML = `<div class="card"><h2>Data health (now, not as-of)</h2><p class="sub">Newest public row in each source vs how often it should update (configs/risk.yaml). A stale source silently freezes the signals built on it.</p>
+    const tr = await trInfo(), F = (tr.tracking || {}).freshness || [], RD = tr.readiness || {};
+    const mark = c => c.ok ? statusChip("pass") : c.blocker ? `<span class="chip st-fail"><span class="dot"></span>blocker</span>` : `<span class="chip st-review"><span class="dot"></span>optional</span>`;
+    host.innerHTML = `${RD.checks ? `<div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h2>Ready to train? (python -m ddb.rl.readiness, ${day(RD.built)})</h2>
+        <span class="chip ${RD.ready ? "st-pass" : "st-fail"}" style="font-size:13px;padding:4px 10px"><span class="dot"></span>${RD.ready ? "READY" : `NOT READY · ${RD.blockers} blocker${RD.blockers === 1 ? "" : "s"}`}</span></div>
+        <p class="sub">Splits: ${Object.entries(RD.splits || {}).map(([k, v]) => `${esc(k)} ${esc(v[0])} → ${esc(v[1])}`).join(" · ")}. The test period stays locked until a final evaluation.</p>
+        <table><thead><tr><th>Check</th><th>Status</th><th>Detail</th><th>Fix</th></tr></thead><tbody>
+        ${RD.checks.map(c => `<tr><td><b>${esc(c.check)}</b></td><td>${mark(c)}</td><td class="secondary">${esc(c.detail)}</td><td>${c.ok ? "" : `<code>${esc(c.fix || "")}</code>`}</td></tr>`).join("")}
+        </tbody></table></div>` : ""}<div class="card"><h2>Data health (now, not as-of)</h2><p class="sub">Newest public row in each source vs how often it should update (configs/risk.yaml). A stale source silently freezes the signals built on it.</p>
       <table><thead><tr><th>Source</th><th>Newest data</th><th class="num">Age</th><th class="num">Allowed</th><th>Status</th></tr></thead><tbody>
       ${F.map(f => `<tr><td><b>${esc(f.source)}</b></td><td>${day(f.last)}</td><td class="num">${f.age_days == null ? "–" : f.age_days.toFixed(1) + " d"}</td><td class="num">${f.limit_days ?? "–"} d</td>
         <td>${f.status === "ok" ? statusChip("pass") : f.status === "stale" ? `<span class="chip st-fail"><span class="dot"></span>stale</span>` : `<span class="chip st-unknown"><span class="dot"></span>not loaded</span>`}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">Run python -m ddb.live.tracking</td></tr>`}
