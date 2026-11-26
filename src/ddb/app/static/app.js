@@ -1047,7 +1047,8 @@
         <p>${r.reasons ? esc(r.reasons) : "No stress conditions."}${r.crash_state ? ` <span class="chip st-fail"><span class="dot"></span>momentum crash risk: the market is down over 2 years and volatile; momentum strategies have crashed in rebounds from states like this</span>` : ""}</p></div>
       <div class="grid tiles" style="margin-top:14px">
         ${tile(n(r.vix), `VIX (top ${r.vix_pct == null ? "–" : Math.round((1 - r.vix_pct) * 100)}% of the last 5 years)`, r.vix >= th.vix_high)}
-        ${tile(n(r.hy_oas) + "%", `high-yield credit spread (${r.hy_chg_3m == null ? "–" : (r.hy_chg_3m >= 0 ? "+" : "") + r.hy_chg_3m.toFixed(2)} in 3 months)`, r.hy_oas >= th.hy_oas_high)}
+        ${r.hy_oas != null ? tile(n(r.hy_oas) + "%", `high-yield credit spread (${r.hy_chg_3m == null ? "–" : (r.hy_chg_3m >= 0 ? "+" : "") + r.hy_chg_3m.toFixed(2)} in 3 months)`, r.hy_oas >= th.hy_oas_high)
+          : tile(n(r.baa) + "%", `Baa corporate spread over Treasuries (${r.baa_chg_3m == null ? "–" : (r.baa_chg_3m >= 0 ? "+" : "") + r.baa_chg_3m.toFixed(2)} in 3 months; high-yield data not available this far back)`, r.baa >= (th.baa_high ?? 3.5))}
         ${tile(n(r.curve_10y3m), "10-year minus 3-month yield (below 0 = inverted)", r.curve_10y3m < 0)}
         ${tile(signedPct(r.mkt_trend), "average stock vs its 200-day average", r.mkt_trend < 0)}
         ${tile(pct(r.breadth), "of stocks above their 200-day average", r.breadth < th.breadth_low)}
@@ -1059,13 +1060,13 @@
         </tbody></table>
         ${by.momentum_in_crash_states ? `<p class="sub" style="margin-top:8px">Momentum (12-1) IC in crash-risk months: ${by.momentum_in_crash_states.ic == null ? "– (none yet)" : by.momentum_in_crash_states.ic.toFixed(3)} over ${by.momentum_in_crash_states.months} months, vs ${n(by.momentum_in_crash_states.ic_otherwise)} otherwise.</p>` : ""}</div>
       <div class="grid g2" style="margin-top:14px">
-        <div class="card"><h2>Fear and credit</h2><p class="sub">VIX and the high-yield spread (%)</p><div class="chart" id="m-fear"></div></div>
+        <div class="card"><h2>Fear and credit</h2><p class="sub">VIX, the Baa corporate spread (since 1986) and the high-yield spread (last ~3 years on FRED), %</p><div class="chart" id="m-fear"></div></div>
         <div class="card"><h2>Market trend</h2><p class="sub">Equal-weight index of liquid stocks (median daily return)</p><div class="chart" id="m-idx"></div></div>
         <div class="card"><h2>Breadth</h2><p class="sub">Share of liquid stocks above their 200-day average</p><div class="chart" id="m-br"></div></div>
         <div class="card"><h2>Yield curve</h2><p class="sub">10y − 2y and 10y − 3m, percentage points</p><div class="chart" id="m-yc"></div></div>
       </div>`;
     const W = D.filter((x, i) => i % 5 === 0 || i === D.length - 1);
-    lineChart(document.getElementById("m-fear"), [{ name: "VIX", data: W.map(x => [ms(x.d), x.vix]) }, { name: "HY spread", data: W.map(x => [ms(x.d), x.hy_oas]) }], { yFmt: v => (v ?? 0).toFixed(0) });
+    lineChart(document.getElementById("m-fear"), [{ name: "VIX", data: W.map(x => [ms(x.d), x.vix]) }, { name: "Baa spread", data: W.map(x => [ms(x.d), x.baa]).filter(p => p[1] != null) }, { name: "HY spread", data: W.map(x => [ms(x.d), x.hy_oas]).filter(p => p[1] != null) }], { yFmt: v => (v ?? 0).toFixed(0) });
     lineChart(document.getElementById("m-idx"), [{ name: "index", data: W.map(x => [ms(x.d), x.mkt_index]) }], { yFmt: v => (v ?? 0).toFixed(2) });
     lineChart(document.getElementById("m-br"), [{ name: "breadth", data: W.map(x => [ms(x.d), x.breadth]), markLine: { y: th.breadth_low, label: "stress line" } }], { yFmt: v => pct(v), yMin: 0 });
     lineChart(document.getElementById("m-yc"), [{ name: "10y−2y", data: W.map(x => [ms(x.d), x.curve_10y2y]) }, { name: "10y−3m", data: W.map(x => [ms(x.d), x.curve_10y3m]) }], { yFmt: v => (v ?? 0).toFixed(1) });

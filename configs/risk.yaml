@@ -8,6 +8,10 @@ regime:
   vix_pct_high: 0.90        # ... VIX in its top 10% of the trailing 5 years
   hy_oas_high: 6.0          # high-yield spread, % points, or ...
   hy_oas_jump_3m: 1.5       # ... a 3-month widening of this many points
+  # FRED serves only ~3 years of the high-yield spread; before that the Baa spread
+  # (BAA10Y, since 1986) stands in, with its own thresholds.
+  baa_high: 3.5
+  baa_jump_3m: 0.75
   breadth_low: 0.35         # share of stocks above their 200-day average
   # Momentum crash state (Daniel-Moskowitz 2016): market down over 24 months and
   # recent volatility high. Momentum tends to crash in the rebound from such states.

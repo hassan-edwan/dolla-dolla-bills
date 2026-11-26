@@ -599,7 +599,7 @@ def market_overview(con) -> dict:
     if not f.exists():
         return {}
     r = _q(con, f"SELECT * FROM read_parquet('{f.as_posix()}') ORDER BY d")
-    cols = ["vix", "vix_pct", "hy_oas", "hy_chg_3m", "curve_10y2y", "curve_10y3m", "mkt_index", "mkt_trend", "breadth",
+    cols = ["vix", "vix_pct", "hy_oas", "hy_chg_3m", "baa", "baa_chg_3m", "credit", "curve_10y2y", "curve_10y3m", "mkt_index", "mkt_trend", "breadth",
             "mkt_vol", "mkt_ret_24m", "crash_state", "points", "regime", "reasons"]
     rows = []
     for x in r.to_dict(orient="records"):

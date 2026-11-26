@@ -158,7 +158,8 @@ def run(db_path=DB_PATH) -> dict:
     if rf.exists():
         r = pd.read_parquet(rf)
         r = r[pd.to_datetime(r["d"]) >= tr0]
-        cov = float(r[["vix", "hy_oas", "breadth"]].notna().all(axis=1).mean()) if len(r) else 0.0
+        credit = r["credit"] if "credit" in r else r["hy_oas"]
+        cov = float((r["vix"].notna() & credit.notna() & r["breadth"].notna()).mean()) if len(r) else 0.0
         checks.append(_check("regime inputs", cov >= cfg["min_regime_coverage"],
                              f"{cov:.1%} of trading days since {tr0.date()} have VIX, credit spread and breadth", FIX["regime"]))
 

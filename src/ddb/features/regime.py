@@ -80,7 +80,11 @@ def classify(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
         for i in np.where(mask)[0]:
             reasons[i].append(text)
     add((df["vix"] >= cfg["vix_high"]) | (df["vix_pct"] >= cfg["vix_pct_high"]), "VIX high")
-    add((df["hy_oas"] >= cfg["hy_oas_high"]) | (df["hy_chg_3m"] >= cfg["hy_oas_jump_3m"]), "credit spreads wide or widening")
+    hy = (df["hy_oas"] >= cfg["hy_oas_high"]) | (df["hy_chg_3m"] >= cfg["hy_oas_jump_3m"])
+    if "baa" in df:   # long-history stand-in where the high-yield spread is missing
+        baa = (df["baa"] >= cfg.get("baa_high", 3.5)) | (df["baa_chg_3m"] >= cfg.get("baa_jump_3m", 0.75))
+        hy = hy.where(df["hy_oas"].notna(), baa)
+    add(hy, "credit spreads wide or widening")
     add(df["mkt_trend"] < 0, "market below its 200-day average")
     add(df["breadth"] < cfg["breadth_low"], "few stocks above their 200-day average")
     inverted = (df["curve_10y3m"] < 0).fillna(False)
@@ -106,6 +110,9 @@ def build_frame(con, cfg: dict) -> pd.DataFrame:
     df["vix_pct"] = df["vix"].rolling(1260, min_periods=250).rank(pct=True)
     df["hy_oas"] = g("BAMLH0A0HYM2")
     df["hy_chg_3m"] = df["hy_oas"] - df["hy_oas"].shift(63)
+    df["baa"] = g("BAA10Y")
+    df["baa_chg_3m"] = df["baa"] - df["baa"].shift(63)
+    df["credit"] = df["hy_oas"].where(df["hy_oas"].notna(), df["baa"])   # whichever is available
     df["curve_10y2y"] = g("T10Y2Y")
     df["curve_10y3m"] = g("DGS10") - g("DGS3MO")
     df["mkt_ret_1d"] = mkt

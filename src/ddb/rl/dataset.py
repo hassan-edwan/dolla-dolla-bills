@@ -43,7 +43,7 @@ OUT = DATA_DIR / "db" / "rl"
 SIG = DATA_DIR / "db" / "signals"
 REGIME = DATA_DIR / "db" / "regime" / "regime.parquet"
 DB_PATH = DATA_DIR / "ddb.duckdb"
-REGIME_COLS = ["vix", "vix_pct", "hy_oas", "hy_chg_3m", "curve_10y3m", "mkt_trend", "breadth", "mkt_vol",
+REGIME_COLS = ["vix", "vix_pct", "credit", "baa", "baa_chg_3m", "curve_10y3m", "mkt_trend", "breadth", "mkt_vol",
                "mkt_ret_24m", "crash_state", "points"]
 
 
