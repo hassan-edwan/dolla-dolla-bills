@@ -181,3 +181,16 @@ def test_weapons_spending_counts_only_weapons_codes():
         ) v(psc, naics, psc_description, what)""")
     hits = [r[0] for r in con.execute(f"SELECT what FROM t WHERE {weapons_spending_filter(ws)}").fetchall()]
     assert hits == ["guided missile systems", "ammunition", "missile & space R&D", "parts, but small-arms maker NAICS"]
+
+
+def test_validation_math():
+    import numpy as np
+    from ddb.features.validate import nw_tstat, zscore_within
+    x = np.array([0.02] * 30 + [0.04] * 30)
+    assert nw_tstat(x, 0) > 10                       # consistently positive IC -> large t
+    assert abs(nw_tstat(np.array([0.05, -0.05] * 30), 0)) < 1e-6
+    df = pd.DataFrame({"d": ["m"] * 12, "industry": ["a"] * 6 + ["b"] * 6,
+                       "v": [1, 2, 3, 4, 5, 6, 10, 20, 30, 40, 50, 60]})
+    z = zscore_within(df, "v")
+    # industry-neutral: same rank position -> same z in both industries
+    assert np.allclose(z[:6].to_numpy(), z[6:].to_numpy())

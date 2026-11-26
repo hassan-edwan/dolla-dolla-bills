@@ -119,3 +119,7 @@ tr.clickable:hover td, tr.selected td { background: var(--surface-2); }
   .asof { margin-left: 0; }
   .asof input[type=range] { width: 140px; }
 }
+
+td.heat { font-variant-numeric: tabular-nums; }
+.ctx-banner { border-style: dashed; }
+.ctx-note { margin-top: -2px; }

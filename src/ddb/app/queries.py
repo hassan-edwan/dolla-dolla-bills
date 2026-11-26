@@ -229,6 +229,7 @@ def company(con, cik: int) -> dict:
     out["filing_signals"] = _records(_q(con, """
         SELECT file_date, form, signal, phrase, accession, document, knowable_at AS k
         FROM filing_text_signals WHERE cik = ? ORDER BY knowable_at DESC LIMIT 400""", [cik]))
+    out["signals"] = company_signals(con, cik)
     out["labels"] = _records(_q(con, """SELECT outcome, exit_date, method, confidence, consideration, source_url,
                                         event_known_at AS k FROM outcomes WHERE cik = ?""", [cik]))
     return out
@@ -322,3 +323,103 @@ def decisions(con, run_id: str) -> dict:
     d["evidence_ok"] = d["decision_id"].map(lambda x: not late.get(x, False))
     d["latest_evidence"] = d["decision_id"].map(lambda x: latest.get(x))
     return {"decisions": _records(d), "factors": _records(f.rename(columns={"knowable_at": "k"}))}
+
+
+# ------------------------------------------------------------------ signals (validated predictors)
+SIG = "data/db/signals"
+AVOID_RULES = {   # long-only exclusion flags from short-leg signals (percentiles are sign-adjusted: low = bad)
+    "vol_60d": "very volatile", "max_ret_21d": "lottery spike", "net_issuance": "heavy dilution",
+    "offerings_12m": "raising equity", "days_to_cover": "crowded short", "short_pct": "heavily shorted",
+    "asset_growth": "rapid asset growth", "going_concern": "going-concern warning", "late_filings_12m": "late filings",
+}
+
+
+def _validation() -> dict:
+    import json
+    from pathlib import Path
+    from ..config import ROOT
+    f = Path(ROOT) / SIG / "validation.json"
+    return json.loads(f.read_text()) if f.exists() else {}
+
+
+def signals_overview(con) -> dict:
+    """Scorecard + time series for the Signals tab. IC for month d is public once its
+    1-month forward window has ended, so k = d + 31 days."""
+    v = _validation()
+    if not v:
+        return {}
+    ic = _q(con, f"SELECT * FROM read_parquet('{SIG}/ic_monthly.parquet') ORDER BY d")
+    series = {}
+    for s, g in ic.groupby("signal"):
+        g = g.sort_values("d")
+        series[s] = [{"d": str(r.d)[:10], "k": (pd.Timestamp(r.d) + pd.Timedelta(days=31)).isoformat() + "Z",
+                      "ic": None if pd.isna(r.ic_1m) else round(float(r.ic_1m), 4),
+                      "roll12": None if pd.isna(x) else round(float(x), 4)}
+                     for r, x in zip(g.itertuples(), g["ic_1m"].rolling(12, min_periods=6).mean())]
+    qd = _q(con, f"SELECT signal, quintile, avg(excess_ret) AS r FROM read_parquet('{SIG}/quintiles_monthly.parquet') GROUP BY 1, 2")
+    quint = {s: [round(float(x), 5) for x in g.sort_values("quintile")["r"]] for s, g in qd.groupby("signal")}
+    cq = _q(con, f"SELECT * FROM read_parquet('{SIG}/composite_quintiles.parquet') ORDER BY d")
+    comp_series = []
+    if len(cq):
+        w = cq.pivot_table(index="d", columns="quintile", values="excess_ret").sort_index()
+        cum5 = (1 + w[5]).cumprod() - 1
+        cumsp = (1 + (w[5] - w[1])).cumprod() - 1
+        cic = _q(con, f"SELECT * FROM read_parquet('{SIG}/composite_ic.parquet') ORDER BY d").set_index("d")["ic_1m"]
+        for d in w.index:
+            comp_series.append({"d": str(d)[:10], "k": (pd.Timestamp(d) + pd.Timedelta(days=31)).isoformat() + "Z",
+                                "q5": round(float(w.at[d, 5]), 5), "cum_q5": round(float(cum5[d]), 5),
+                                "cum_spread": round(float(cumsp[d]), 5),
+                                "ic": None if d not in cic.index or pd.isna(cic[d]) else round(float(cic[d]), 4)})
+    months = _q(con, f"SELECT DISTINCT d FROM read_parquet('{SIG}/scores.parquet') ORDER BY d")
+    return {"built": v.get("built"), "universe_rule": v.get("universe_rule"), "signals": v["signals"],
+            "composite": v["composite"], "composite_quintiles": quint.get("composite") or
+            [round(float(x), 5) for x in cq.groupby("quintile")["excess_ret"].mean()] if len(cq) else [],
+            "quintiles": quint, "ic_series": series, "composite_series": comp_series,
+            "composite_signals_by_month": v.get("composite_signals_by_month", {}),
+            "correlation": v.get("correlation", {}), "avoid_rules": AVOID_RULES,
+            "months": [str(m)[:10] for m in months["d"]]}
+
+
+def signal_month(con, month: str, limit: int = 200) -> dict:
+    """Ranked candidates for one month-end: companies passing every investment screen
+    as of that date, with signal percentiles and avoid flags."""
+    from ..db.pit import AsOf
+    v = _validation()
+    used = (v.get("composite_signals_by_month") or {}).get(month[:10], [])
+    sc = _q(con, f"SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE CAST(d AS DATE) = CAST(? AS DATE)", [month[:10]])
+    if sc.empty:
+        return {"month": month[:10], "rows": [], "used": used}
+    t = pd.Timestamp(month[:10]) + pd.Timedelta(hours=21, minutes=30)
+    with AsOf(con, t) as db:
+        trad = set(db.tradable()["cik"].astype(int))
+    universe_n = len(sc)
+    sc = sc[sc["cik"].astype(int).isin(trad)]
+    names = _q(con, "SELECT cik, name, current_tickers[1] AS ticker FROM companies")
+    sc = sc.merge(names, on="cik", how="left")
+    rows = []
+    for r in sc.sort_values("composite", ascending=False).itertuples(index=False):
+        d = r._asdict()
+        flags = [lab for s, lab in AVOID_RULES.items()
+                 if f"{s}__pct" in d and d[f"{s}__pct"] is not None and not pd.isna(d[f"{s}__pct"])
+                 and d[f"{s}__pct"] <= (5 if s in ("going_concern", "late_filings_12m") else 10)
+                 and not (s in ("going_concern", "late_filings_12m", "offerings_12m") and (d.get(s) or 0) == 0)]
+        rows.append({"cik": int(r.cik), "ticker": d.get("ticker"), "name": d.get("name"), "industry": d.get("industry"),
+                     "composite_pct": None if pd.isna(d.get("composite__pct")) else round(float(d["composite__pct"]), 1),
+                     "pct": {s: (None if pd.isna(d.get(f"{s}__pct")) else round(float(d[f"{s}__pct"]), 1))
+                             for s in [x["signal"] for x in v["signals"]] if f"{s}__pct" in d},
+                     "flags": flags, "price": d.get("price_raw"), "dollar_vol": d.get("dollar_vol_20d"),
+                     "mcap": d.get("mcap")})
+    return {"month": month[:10], "k": (t + pd.Timedelta(minutes=1)).isoformat() + "Z", "used": used,
+            "universe_n": universe_n, "tradable_n": len(rows), "rows": _records(pd.DataFrame(rows))[:limit]}
+
+
+def company_signals(con, cik: int) -> list[dict]:
+    df = _q(con, f"SELECT * FROM read_parquet('{SIG}/scores.parquet') WHERE cik = ? ORDER BY d", [int(cik)])
+    if df.empty:
+        return []
+    pcols = [c for c in df.columns if c.endswith("__pct")]
+    out = []
+    for r in df.to_dict(orient="records"):
+        out.append({"d": str(r["d"])[:10], "k": (pd.Timestamp(r["d"]) + pd.Timedelta(hours=21, minutes=30)).isoformat() + "Z",
+                    "pct": {c[:-5]: (None if pd.isna(r[c]) else round(float(r[c]), 1)) for c in pcols}})
+    return out

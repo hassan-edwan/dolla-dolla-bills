@@ -12,7 +12,7 @@
   const fileFor = path => path.slice(1).replace(/[^A-Za-z0-9/_-]/g, "_") + ".json";
   const MIN_DATE = "2010-01-01";
   const state = {
-    tab: "overview", asOf: Date.now(), hindsight: false, industry: "nuclear",
+    tab: "signals", asOf: Date.now(), hindsight: false, context: false, industry: "nuclear", sig: null, candFilter: "",
     cik: null, run: null, ddate: null, did: null, exclFilter: "",
   };
   const INDUSTRY_LABEL = {
@@ -144,6 +144,7 @@
   range.addEventListener("input", () => { setAsOf(minMs + range.value * 864e5, "range"); rerender(); });
   dateIn.addEventListener("change", () => { if (dateIn.value) { setAsOf(Date.parse(dateIn.value + "T23:59:59Z"), "date"); rerender(); } });
   document.getElementById("hindsight").addEventListener("change", e => { state.hindsight = e.target.checked; render(); });
+  document.getElementById("context").addEventListener("change", e => { state.context = e.target.checked; render(); });
   document.getElementById("theme").addEventListener("click", () => {
     const cur = document.documentElement.getAttribute("data-theme");
     const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
@@ -173,10 +174,14 @@
     const seq = renderSeq;
     disposeCharts();
     // Show a placeholder if the view takes a moment (avoids showing the previous tab's content).
-    const loading = setTimeout(() => { if (seq === renderSeq) view.innerHTML = `<div class="card"><div class="empty">Loading…</div></div>`; }, 250);
+    const before = view.firstElementChild;   // only show "Loading…" if the view hasn't drawn anything yet
+    const loading = setTimeout(() => {
+      if (seq === renderSeq && view.firstElementChild === before) view.innerHTML = `<div class="card"><div class="empty">Loading…</div></div>`;
+    }, 250);
     try {
-      await ({ overview: vOverview, universe: vUniverse, industry: vIndustry, company: vCompany, decisions: vDecisions })[state.tab]();
+      await ({ signals: vSignals, overview: vOverview, universe: vUniverse, industry: vIndustry, company: vCompany, decisions: vDecisions })[state.tab]();
       clearTimeout(loading);
+      await applyContext();
     } catch (e) {
       clearTimeout(loading);
       view.innerHTML = `<div class="card"><div class="empty">Could not load: ${esc(e.message)}</div></div>`;
@@ -261,17 +266,17 @@
       <div class="row" style="margin-bottom:12px">${sel}<span class="secondary">Signals for companies in this industry and news tagged to it.</span></div>
       <div class="grid g2">
         <div class="card"><h2>Companies</h2><p class="sub">Active vs tradable after screens</p><div class="chart" id="c-uni"></div></div>
-        <div class="card"><h2>What filings say</h2><p class="sub">Filings per quarter using bottleneck, development or stagnation language (EDGAR full-text search)</p><div class="chart" id="c-fil"></div></div>
-        <div class="card"><h2>What the news says</h2><p class="sub">Articles per week carrying each signal (GDELT; backfill in progress)</p><div class="chart" id="c-news"></div></div>
-        <div class="card"><h2>News tone</h2><p class="sub">Average article tone per week (negative = critical coverage)</p><div class="chart" id="c-tone"></div></div>
-        <div class="card"><h2>Research activity</h2><p class="sub">arXiv papers per month</p><div class="chart" id="c-arx"></div></div>
-        <div class="card"><h2>Public attention</h2><p class="sub">Weekly Wikipedia views of industry topics</p><div class="chart" id="c-wiki"></div></div>
-        <div class="card"><h2>Insider money</h2><p class="sub">Open-market insider buys (up) and sales (down) per month, by disclosure date</p><div class="chart" id="c-ins"></div></div>
+        <div class="card" data-sig="bottleneck_1y"><h2>What filings say</h2><p class="sub">Filings per quarter using bottleneck, development or stagnation language (EDGAR full-text search)</p><div class="chart" id="c-fil"></div></div>
+        <div class="card" data-sig="news_volume"><h2>What the news says</h2><p class="sub">Articles per week carrying each signal (GDELT; backfill in progress)</p><div class="chart" id="c-news"></div></div>
+        <div class="card" data-sig="news_tone"><h2>News tone</h2><p class="sub">Average article tone per week (negative = critical coverage)</p><div class="chart" id="c-tone"></div></div>
+        <div class="card" data-sig="none"><h2>Research activity</h2><p class="sub">arXiv papers per month</p><div class="chart" id="c-arx"></div></div>
+        <div class="card" data-sig="wiki_attention"><h2>Public attention</h2><p class="sub">Weekly Wikipedia views of industry topics</p><div class="chart" id="c-wiki"></div></div>
+        <div class="card" data-sig="insider_opp_net"><h2>Insider money</h2><p class="sub">Open-market insider buys (up) and sales (down) per month, by disclosure date</p><div class="chart" id="c-ins"></div></div>
         <div class="card"><h2>How companies left</h2><p class="sub">Exits per year, counted once public</p><div class="chart" id="c-exit"></div></div>
-        <div class="card"><h2>Regulation</h2><p class="sub">Federal Register documents per month from agencies shaping this industry</p><div class="chart" id="c-reg"></div></div>
-        <div class="card"><h2>Government money</h2><p class="sub">Federal contract obligations per quarter (DoD counted 90 days late, as published)</p><div class="chart" id="c-con"></div></div>
-        <div class="card"><h2>Congressional trades</h2><p class="sub">Disclosed trades in this industry's stocks per quarter</p><div class="chart" id="c-pol"></div></div>
-        <div class="card"><h2>Who oversees it</h2><p class="sub">Committee leaders as of this date</p><div class="scroll"><table><thead><tr><th>Committee</th><th>Member</th><th>Role</th><th>Party</th><th>Since</th></tr></thead><tbody>
+        <div class="card" data-sig="none"><h2>Regulation</h2><p class="sub">Federal Register documents per month from agencies shaping this industry</p><div class="chart" id="c-reg"></div></div>
+        <div class="card" data-sig="contracts_rev"><h2>Government money</h2><p class="sub">Federal contract obligations per quarter (DoD counted 90 days late, as published)</p><div class="chart" id="c-con"></div></div>
+        <div class="card" data-sig="congress_net"><h2>Congressional trades</h2><p class="sub">Disclosed trades in this industry's stocks per quarter</p><div class="chart" id="c-pol"></div></div>
+        <div class="card" data-sig="congress_net"><h2>Who oversees it</h2><p class="sub">Committee leaders as of this date</p><div class="scroll"><table><thead><tr><th>Committee</th><th>Member</th><th>Role</th><th>Party</th><th>Since</th></tr></thead><tbody>
           ${comm.map(r => `<tr><td>${esc(r.committee_name)}</td><td>${esc(r.member)}</td><td>${esc(r.title)}</td><td>${esc(r.party)}</td><td>${day(r.valid_from)}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">No data for this date</td></tr>`}
           </tbody></table></div></div>
       </div>`;
@@ -360,6 +365,9 @@
         <div class="row" style="margin:6px 0 10px">${inds.map(i => `<span class="chip" title="${esc(i.method)} · ${esc(i.matched || "")}">${esc(INDUSTRY_LABEL[i.industry] || i.industry)} · ${esc(i.sub_industry || "")} <span class="muted">(${esc(i.confidence)})</span></span>`).join("") || `<span class="muted">Not in a tracked industry on this date</span>`}</div>
         <table><thead><tr><th>Screen</th><th>Status</th><th>Why</th></tr></thead><tbody>${parts.map(x => `<tr><td>${esc(x.name)}</td><td>${statusChip(x.status)}</td><td class="secondary">${esc(x.why || "")}</td></tr>`).join("")}</tbody></table>
       </div>
+      <div class="card" style="margin-top:14px"><h2>Signal profile</h2>
+        <p class="sub">Percentile within the liquid universe at the latest month-end before the as-of date (100 = most favorable). Only signals that predicted returns in our tests are shown.</p>
+        <div class="grid g2"><div class="chart" id="k-sigbar"></div><div><h3>Composite percentile over time</h3><div class="chart short" id="k-sigline"></div></div></div></div>
       ${state.hindsight ? `<div class="card hindsight" style="margin-top:14px"><h2>Hindsight: how this listing ended</h2><p class="sub">Outcome labels are training targets only. A model never sees these as inputs.</p>
         ${labels.length ? `<table><thead><tr><th>Outcome</th><th>Exit date</th><th>Source</th><th>Confidence</th><th>Details</th></tr></thead><tbody>${labels.map(l => `<tr><td>${esc(l.outcome)}</td><td>${day(l.exit_date)}</td><td>${esc(l.method)}</td><td>${esc(l.confidence)}</td><td class="secondary">${esc(l.consideration || "")} ${l.source_url ? `<a href="${esc(l.source_url)}" target="_blank" rel="noopener">source</a>` : ""}</td></tr>`).join("")}</tbody></table>` : `<div class="empty">No label</div>`}</div>` : ""}
       <div class="grid g2" style="margin-top:14px">
@@ -367,17 +375,36 @@
         <div class="card"><h2>Filing events</h2><p class="sub">Distress, dilution and corporate events by public date</p><div class="chart tall" id="k-ev"></div></div>
         <div class="card"><h2>Sharia ratios</h2><p class="sub">Quarterly, from figures known at each date; dashed line = limit</p><div class="grid g3" id="k-sh"></div></div>
         <div class="card"><h2>Financials (as reported at the time)</h2><p class="sub">Revenue (annual), cash + short-term investments, debt, average market cap</p><div class="grid g3" id="k-fin"></div></div>
-        <div class="card"><h2>Insider trades</h2><p class="sub">Open-market buys (up) and sales (down) per month, by disclosure date</p><div class="chart" id="k-ins"></div></div>
-        <div class="card"><h2>News coverage</h2><p class="sub">Articles per week naming the company (GDELT; backfill in progress)</p><div class="chart" id="k-news"></div></div>
-        <div class="card"><h2>Public attention</h2><p class="sub">Weekly Wikipedia views</p><div class="chart" id="k-wiki"></div></div>
-        <div class="card"><h2>Government contracts</h2><p class="sub">Obligations per quarter, by public date</p><div class="chart" id="k-con"></div></div>
+        <div class="card" data-sig="insider_opp_net"><h2>Insider trades</h2><p class="sub">Open-market buys (up) and sales (down) per month, by disclosure date</p><div class="chart" id="k-ins"></div></div>
+        <div class="card" data-sig="news_volume"><h2>News coverage</h2><p class="sub">Articles per week naming the company (GDELT; backfill in progress)</p><div class="chart" id="k-news"></div></div>
+        <div class="card" data-sig="wiki_attention"><h2>Public attention</h2><p class="sub">Weekly Wikipedia views</p><div class="chart" id="k-wiki"></div></div>
+        <div class="card" data-sig="contracts_rev"><h2>Government contracts</h2><p class="sub">Obligations per quarter, by public date</p><div class="chart" id="k-con"></div></div>
       </div>
       <div class="grid g2" style="margin-top:14px">
-        <div class="card"><h2>Recent insider trades</h2><div class="scroll"><table><thead><tr><th>Traded</th><th>Disclosed</th><th class="num">Lag</th><th>Who</th><th>Type</th><th class="num">Value</th></tr></thead><tbody id="k-inst"></tbody></table></div></div>
-        <div class="card"><h2>Congressional trades</h2><div class="scroll"><table><thead><tr><th>Traded</th><th>Disclosed</th><th>Member</th><th>Type</th><th class="num">Amount</th></tr></thead><tbody id="k-pol"></tbody></table></div></div>
-        <div class="card"><h2>What its filings said</h2><p class="sub">Bottleneck / development / stagnation phrases</p><div class="scroll"><table><thead><tr><th>Filed</th><th>Form</th><th>Signal</th><th>Phrase</th></tr></thead><tbody id="k-fs"></tbody></table></div></div>
-        <div class="card"><h2>Headlines</h2><div class="scroll"><table><thead><tr><th>Published</th><th>Source</th><th class="num">Tone</th><th>Signals</th></tr></thead><tbody id="k-hl"></tbody></table></div></div>
+        <div class="card" data-sig="insider_opp_net"><h2>Recent insider trades</h2><div class="scroll"><table><thead><tr><th>Traded</th><th>Disclosed</th><th class="num">Lag</th><th>Who</th><th>Type</th><th class="num">Value</th></tr></thead><tbody id="k-inst"></tbody></table></div></div>
+        <div class="card" data-sig="congress_net"><h2>Congressional trades</h2><div class="scroll"><table><thead><tr><th>Traded</th><th>Disclosed</th><th>Member</th><th>Type</th><th class="num">Amount</th></tr></thead><tbody id="k-pol"></tbody></table></div></div>
+        <div class="card" data-sig="bottleneck_1y"><h2>What its filings said</h2><p class="sub">Bottleneck / development / stagnation phrases</p><div class="scroll"><table><thead><tr><th>Filed</th><th>Form</th><th>Signal</th><th>Phrase</th></tr></thead><tbody id="k-fs"></tbody></table></div></div>
+        <div class="card" data-sig="news_tone"><h2>Headlines</h2><div class="scroll"><table><thead><tr><th>Published</th><th>Source</th><th class="num">Tone</th><th>Signals</th></tr></thead><tbody id="k-hl"></tbody></table></div></div>
       </div>`;
+    const info = await sigInfo();
+    const SG = known(c.signals || []);
+    const lastSig = SG.at(-1);
+    const goodSigs = (info.signals || []).filter(x => GOOD.has(x.status));
+    const sbEl = document.getElementById("k-sigbar");
+    if (!emptyIf(sbEl, !lastSig || !goodSigs.length, lastSig ? "No signal passed validation" : "Not in the liquid universe on this date")) {
+      const items = goodSigs.map(x => ({ name: x.label + (x.role === "avoid" ? " (avoid if low)" : ""), v: lastSig.pct[x.signal] })).filter(x => x.v != null);
+      items.unshift({ name: "Composite", v: lastSig.pct.composite });
+      const opt = baseOption({ grid: { left: 240, right: 36, top: 10, bottom: 24 } });
+      opt.xAxis = { type: "value", min: 0, max: 100, axisLabel: { color: css("--text-muted") }, splitLine: { lineStyle: { color: css("--grid") } } };
+      opt.yAxis = { type: "category", inverse: true, data: items.map(x => x.name), axisLabel: { color: css("--text-secondary"), fontSize: 11 } };
+      opt.tooltip = { trigger: "item", backgroundColor: css("--surface-1"), borderColor: css("--border"), textStyle: { color: css("--text-primary") }, formatter: q => `${esc(q.name)}: ${q.value == null ? "–" : Math.round(q.value)}th percentile` };
+      opt.series = [{ type: "bar", barMaxWidth: 14, data: items.map(x => ({ value: x.v, itemStyle: { color: x.v == null ? css("--axis") : x.v >= 50 ? css("--div-pos") : css("--div-neg"), borderRadius: [0, 4, 4, 0] } })),
+                      label: { show: true, position: "right", color: css("--text-secondary"), formatter: q => q.value == null ? "" : Math.round(q.value) } }];
+      opt.series[0].markLine = { symbol: "none", silent: true, lineStyle: { color: css("--axis"), type: "dashed" }, label: { show: false }, data: [{ xAxis: 50 }] };
+      mount(sbEl, opt);
+      sbEl.style.height = Math.max(160, 26 * items.length + 40) + "px";
+    }
+    lineChart(document.getElementById("k-sigline"), [{ name: "composite percentile", data: SG.filter(p => p.pct.composite != null).map(p => [ms(p.d), p.pct.composite]) }], { yFmt: v => Math.round(v), yMin: 0 });
     const PX = known(c.prices);
     lineChart(document.getElementById("k-px"), [
       { name: "as traded", data: PX.map(r => [ms(r.w), r.close_raw]) },
@@ -422,6 +449,158 @@
     document.getElementById("k-pol").innerHTML = known(c.politicians).slice(0, 200).map(r => `<tr><td>${day(r.trans_date)}</td><td>${day(r.filing_date)} <span class="muted">(${r.disclosure_lag_days ?? "?"}d)</span></td><td>${esc(r.member)} <span class="muted">${esc(r.chamber)}</span></td><td>${esc(r.transaction_type)}</td><td class="num">${money(r.amount_min)}–${money(r.amount_max)}${r.source_url ? ` <a href="${esc(r.source_url)}" target="_blank" rel="noopener">↗</a>` : ""}</td></tr>`).join("") || `<tr><td colspan="5" class="muted">None known</td></tr>`;
     document.getElementById("k-fs").innerHTML = known(c.filing_signals).slice(0, 200).map(r => { const u = edgarUrl(p.cik, r.accession, r.document); return `<tr><td>${day(r.file_date)}</td><td>${esc(r.form)}</td><td>${esc(r.signal)}</td><td>${u ? `<a href="${u}" target="_blank" rel="noopener">${esc(r.phrase)}</a>` : esc(r.phrase)}</td></tr>`; }).join("") || `<tr><td colspan="4" class="muted">None known</td></tr>`;
     document.getElementById("k-hl").innerHTML = known(c.headlines).map(r => `<tr><td>${day(r.published)}</td><td><a href="${esc(r.url)}" target="_blank" rel="noopener">${esc(r.source)}</a></td><td class="num">${r.tone == null ? "–" : r.tone.toFixed(1)}</td><td class="secondary">${esc((r.signals || []).join(", "))}</td></tr>`).join("") || `<tr><td colspan="4" class="muted">None known</td></tr>`;
+  }
+
+
+  // ------------------------------------------------------------------ validated vs context data
+  const GOOD = new Set(["predictive", "moderate"]);
+  let sigCache = null;
+  async function sigInfo() {
+    if (!sigCache) { try { sigCache = await get("/signals"); } catch (e) { sigCache = {}; } }
+    return sigCache;
+  }
+  function statusOf(info, key) { return ((info.signals || []).find(x => x.signal === key) || {}).status || "untested"; }
+  // Panels tagged data-sig show only when that signal predicted returns in our tests (or "unvalidated context" is on).
+  async function applyContext() {
+    const info = await sigInfo();
+    const cards = [...view.querySelectorAll("[data-sig]")];
+    let hidden = 0;
+    cards.forEach(el => {
+      const st = el.dataset.sig === "none" ? "untested" : statusOf(info, el.dataset.sig);
+      const ok = GOOD.has(st);
+      el.hidden = !ok && !state.context;
+      if (!ok) hidden += 1;
+      if (!ok && state.context && !el.querySelector(".ctx-note")) {
+        const n = document.createElement("p"); n.className = "sub ctx-note";
+        n.innerHTML = `<span class="chip st-review"><span class="dot"></span>context only</span> this data did not predict returns in our tests (${esc(st)}).`;
+        el.insertBefore(n, el.children[1] || null);
+      }
+    });
+    view.querySelector(".ctx-banner")?.remove();
+    if (hidden && !state.context) {
+      const b = document.createElement("div"); b.className = "banner ctx-banner";
+      b.innerHTML = `${hidden} panel${hidden > 1 ? "s" : ""} hidden: their data did not predict returns in our tests. Turn on <strong>unvalidated context</strong> to see them.`;
+      view.prepend(b);
+    }
+    charts.forEach(c => c.resize());
+  }
+
+  // ------------------------------------------------------------------ Signals (decision view)
+  const heat = v => v == null ? "" : `background: color-mix(in oklab, var(--series-1) ${Math.round(Math.max(0, v - 50) * 1.4)}%, transparent)`;
+  const pctCell = v => `<td class="num heat" style="${heat(v)}">${v == null ? "–" : Math.round(v)}</td>`;
+  const STATUS_ORDER = ["predictive", "moderate", "weak", "not predictive", "wrong sign", "insufficient data"];
+  const statusChip2 = st => `<span class="chip st-${GOOD.has(st) ? "pass" : st === "weak" ? "review" : st === "wrong sign" ? "fail" : "unknown"}"><span class="dot"></span>${esc(st)}</span>`;
+
+  async function vSignals() {
+    const stale = staleCheck();
+    const info = await sigInfo();
+    if (stale()) return;
+    if (!info.signals) { view.innerHTML = `<div class="card"><div class="empty">Signal validation hasn't been run yet (python -m ddb.features.validate).</div></div>`; return; }
+    // stats from months whose results were public by the as-of date
+    const statsAsOf = key => {
+      const pts = known(info.ic_series[key] || []).filter(p => p.ic != null);
+      if (pts.length < 6) return null;
+      const x = pts.map(p => p.ic), n = x.length, m = x.reduce((a, b) => a + b, 0) / n;
+      const sd = Math.sqrt(x.reduce((a, b) => a + (b - m) ** 2, 0) / n);
+      return { ic: m, t: sd > 0 ? m / sd * Math.sqrt(n) : null, hit: x.filter(v => v > 0).length / n, n };
+    };
+    const months = (info.months || []).filter(d => ms(d) + 0.9 * 864e5 <= state.asOf);
+    const month = months.at(-1);
+    const used = month ? (info.composite_signals_by_month[month] || []) : [];
+    let cand = null;
+    if (month) { try { cand = await get(`/signal_month/${month}`); } catch (e) { cand = { error: e.message, rows: [] }; } }
+    if (stale()) return;
+    const comp = known(info.composite_series || []);
+    const cs = (() => {
+      const pts = comp.filter(p => p.ic != null);
+      if (!pts.length) return null;
+      const x = pts.map(p => p.ic), n = x.length, m = x.reduce((a, b) => a + b, 0) / n;
+      const sd = Math.sqrt(x.reduce((a, b) => a + (b - m) ** 2, 0) / n);
+      const q5 = comp.map(p => p.q5); const q5m = q5.reduce((a, b) => a + b, 0) / q5.length;
+      return { ic: m, t: m / sd * Math.sqrt(n), hit: x.filter(v => v > 0).length / n, q5: q5m, n };
+    })();
+    const rowsSig = info.signals.slice().sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status) || (b.t_stat || 0) - (a.t_stat || 0));
+    if (!state.sig) state.sig = (rowsSig.find(r => GOOD.has(r.status)) || rowsSig[0]).signal;
+    const sel = info.signals.find(x => x.signal === state.sig) || rowsSig[0];
+    const avoid = info.signals.filter(x => x.role === "avoid" && GOOD.has(x.status)).map(x => x.signal);
+    const roleOf = k => (info.signals.find(x => x.signal === k) || {}).role;
+    const BINARY = new Set(["going_concern", "late_filings_12m", "offerings_12m", "cash_runway"]);
+    const showCols = used.filter(k => roleOf(k) !== "avoid" && !BINARY.has(k)).slice(0, 8);
+    const label = k => (info.signals.find(x => x.signal === k) || {}).label || k;
+    const crow = (cand?.rows || []).filter(r => !state.candFilter || `${r.ticker} ${r.name} ${r.industry}`.toLowerCase().includes(state.candFilter.toLowerCase()));
+    view.innerHTML = `
+      <div class="grid tiles">
+        <div class="card tile"><div class="v">${cs ? cs.ic.toFixed(3) : "–"}</div><div class="l">composite rank IC, out-of-sample (${cs ? cs.n : 0} months; t = ${cs && cs.t ? cs.t.toFixed(1) : "–"})</div></div>
+        <div class="card tile"><div class="v">${cs ? pct(cs.hit) : "–"}</div><div class="l">months the composite ranked returns correctly</div></div>
+        <div class="card tile"><div class="v">${cs ? (cs.q5 >= 0 ? "+" : "") + (cs.q5 * 100).toFixed(2) + "%" : "–"}</div><div class="l">top quintile vs universe, per month, before costs</div></div>
+        <div class="card tile"><div class="v">${used.length}</div><div class="l">signals proven before ${day(month)} and in use</div></div>
+        <div class="card tile"><div class="v">${cand?.tradable_n ?? "–"}</div><div class="l">screened, tradable candidates of ${cand?.universe_n ?? "–"} liquid names</div></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="row" style="justify-content:space-between"><div><h2>Ranked candidates · ${day(month)}</h2>
+          <p class="sub">Companies passing every investment screen on this date, ranked by the walk-forward composite. Cells are percentiles within the liquid universe (100 = most favorable). Flags come from signals that predict <em>losers</em>; a long-only book should avoid them.</p></div>
+          <input type="search" id="cf" placeholder="Filter ticker, name, industry…" value="${esc(state.candFilter)}"></div>
+        <div class="scroll" style="max-height:520px"><table><thead><tr><th>#</th><th>Ticker</th><th>Company</th><th>Industry</th><th class="num">Composite</th>
+          ${showCols.map(k => `<th class="num" title="${esc(label(k))}">${esc(label(k).replace(/ \(.*\)/, ""))}</th>`).join("")}<th>Avoid flags</th><th class="num">Price</th><th class="num">$ volume/day</th></tr></thead><tbody>
+          ${crow.slice(0, 120).map((r, i) => `<tr class="clickable" data-cik="${r.cik}"><td class="muted">${i + 1}</td><td><b>${esc(r.ticker || "")}</b></td><td>${esc(r.name || "")}</td><td class="secondary">${esc(INDUSTRY_LABEL[r.industry] || r.industry || "")}</td>
+            ${pctCell(r.composite_pct)}${showCols.map(k => pctCell((r.pct || {})[k])).join("")}
+            <td>${(r.flags || []).map(f => `<span class="chip st-fail"><span class="dot"></span>${esc(f)}</span>`).join(" ")}</td>
+            <td class="num">$${r.price == null ? "–" : r.price.toFixed(2)}</td><td class="num">${money(r.dollar_vol)}</td></tr>`).join("") ||
+            `<tr><td colspan="${8 + showCols.length}" class="muted">${cand?.error ? esc(cand.error) : "No candidates for this month"}</td></tr>`}
+          </tbody></table></div></div>
+      <div class="card" style="margin-top:14px"><h2>Signal scorecard</h2>
+        <p class="sub">Tested on our point-in-time data (${esc(info.universe_rule)}; monthly, next-month returns, failures kept). IC = rank correlation between the signal and next month's return; |t| ≥ 3 is the bar for a new signal. Long leg = top quintile minus universe average, per month: what a long-only account can capture. Stats use only months public by the as-of date; quintile returns are full-sample.</p>
+        <div class="scroll" style="max-height:560px"><table><thead><tr><th>Signal</th><th>Role</th><th>Our test</th><th class="num">Rank IC</th><th class="num">t</th><th class="num">Hit rate</th><th class="num">Long leg /mo</th><th class="num">IC 2012–19</th><th class="num">IC 2020+</th><th class="num">Turnover</th><th>Published evidence</th></tr></thead><tbody>
+        ${rowsSig.map(r => { const a = statsAsOf(r.signal); return `<tr class="clickable ${r.signal === state.sig ? "selected" : ""}" data-sig-row="${r.signal}">
+          <td><b>${esc(r.label)}</b><div class="muted">${esc(r.desc || "")}</div></td><td>${esc(r.role || "")}</td><td>${statusChip2(r.status)}</td>
+          <td class="num">${a ? a.ic.toFixed(3) : "–"}</td><td class="num">${a && a.t != null ? a.t.toFixed(1) : "–"}</td><td class="num">${a ? pct(a.hit) : "–"}</td>
+          <td class="num">${r.long_leg == null ? "–" : (r.long_leg * 100).toFixed(2) + "%"}</td>
+          <td class="num">${r.ic_2012_2019 == null ? "–" : r.ic_2012_2019.toFixed(3)}</td><td class="num">${r.ic_2020_on == null ? "–" : r.ic_2020_on.toFixed(3)}</td>
+          <td class="num">${r.rank_autocorr == null ? "–" : pct(1 - r.rank_autocorr)}</td><td class="secondary">${esc(r.prior || "")}</td></tr>`; }).join("")}
+        </tbody></table></div></div>
+      <div class="grid g2" style="margin-top:14px">
+        <div class="card"><h2>${esc(sel.label)}: does it keep working?</h2><p class="sub">Monthly rank IC and its 12-month average. Above zero = the signal ranked next month's returns correctly.</p><div class="chart tall" id="s-ic"></div></div>
+        <div class="card"><h2>${esc(sel.label)}: return by quintile</h2><p class="sub">Average next-month return vs the universe, from least (Q1) to most favorable (Q5)</p><div class="chart tall" id="s-q"></div></div>
+        <div class="card"><h2>Composite track record (out-of-sample)</h2><p class="sub">Cumulative excess return of the top quintile, and of top minus bottom quintile, before costs</p><div class="chart tall" id="s-comp"></div></div>
+        <div class="card"><h2>How the proven signals overlap</h2><p class="sub">Average monthly rank correlation. Highly correlated signals add little to each other.</p><div class="chart" id="s-corr" style="height:520px"></div></div>
+      </div>
+      <div class="banner" style="margin-top:14px"><strong>Read with care:</strong> results are before trading costs (about 0.5% per round trip in small caps); delisted companies are only partly covered before 2016; and many of our industries have few companies, so a single month's ranking is noisy. Prefer signals that work in both periods and on the long leg.</div>`;
+    document.getElementById("cf").addEventListener("input", e => { state.candFilter = e.target.value; const pos = e.target.selectionStart; vSignals().then(() => { const f = document.getElementById("cf"); f.focus(); f.setSelectionRange(pos, pos); }); });
+    view.querySelectorAll("[data-cik]").forEach(el => el.addEventListener("click", () => openCompany(+el.dataset.cik)));
+    view.querySelectorAll("[data-sig-row]").forEach(el => el.addEventListener("click", () => { state.sig = el.dataset.sigRow; render(); }));
+    const ic = known(info.ic_series[sel.signal] || []);
+    lineChart(document.getElementById("s-ic"), [
+      { name: "monthly IC", data: ic.map(p => [ms(p.d), p.ic]), color: css("--axis") },
+      { name: "12-month average", data: ic.map(p => [ms(p.d), p.roll12]) }], { yFmt: v => (v ?? 0).toFixed(2) });
+    const qs = info.quintiles[sel.signal] || [];
+    const qEl = document.getElementById("s-q");
+    if (!emptyIf(qEl, !qs.length)) {
+      const opt = baseOption();
+      opt.xAxis = { type: "category", data: ["Q1", "Q2", "Q3", "Q4", "Q5"], axisLabel: { color: css("--text-muted") }, axisLine: { lineStyle: { color: css("--axis") } } };
+      opt.yAxis.axisLabel.formatter = v => (v * 100).toFixed(1) + "%";
+      opt.tooltip = { trigger: "axis", backgroundColor: css("--surface-1"), borderColor: css("--border"), textStyle: { color: css("--text-primary") }, valueFormatter: v => (v * 100).toFixed(2) + "%/mo" };
+      opt.series = [{ type: "bar", barMaxWidth: 36, data: qs.map(v => ({ value: v, itemStyle: { color: v >= 0 ? css("--div-pos") : css("--div-neg"), borderRadius: v >= 0 ? [4, 4, 0, 0] : [0, 0, 4, 4] } })),
+                      label: { show: true, position: "top", color: css("--text-secondary"), formatter: q => (q.value * 100).toFixed(2) + "%" } }];
+      mount(qEl, opt);
+    }
+    lineChart(document.getElementById("s-comp"), [
+      { name: "top quintile", data: comp.map(p => [ms(p.d), p.cum_q5]) },
+      { name: "top − bottom", data: comp.map(p => [ms(p.d), p.cum_spread]) }], { yFmt: v => (v * 100).toFixed(0) + "%" });
+    const cEl = document.getElementById("s-corr"), corr = info.correlation || {};
+    if (!emptyIf(cEl, !(corr.signals || []).length, "Fewer than two proven signals")) {
+      const labs = corr.signals.map(k => label(k));
+      const opt = baseOption({ grid: { left: 170, right: 20, top: 10, bottom: 130 } });
+      opt.xAxis = { type: "category", data: labs, axisLabel: { color: css("--text-muted"), rotate: 45, fontSize: 10, interval: 0 } };
+      opt.yAxis = { type: "category", data: labs, axisLabel: { color: css("--text-secondary"), fontSize: 10, interval: 0 } };
+      opt.tooltip = { trigger: "item", backgroundColor: css("--surface-1"), borderColor: css("--border"), textStyle: { color: css("--text-primary") },
+                      formatter: q => `${esc(labs[q.data[0]])} × ${esc(labs[q.data[1]])}: ${q.data[2].toFixed(2)}` };
+      opt.visualMap = { min: -1, max: 1, show: false, inRange: { color: [css("--div-neg"), css("--div-mid"), css("--div-pos")] } };
+      const data = [];
+      corr.matrix.forEach((row, i) => row.forEach((v, j) => data.push([j, i, v])));
+      opt.series = [{ type: "heatmap", data, label: { show: labs.length <= 8, color: css("--text-primary"), fontSize: 10, formatter: q => q.data[2].toFixed(1) },
+                      itemStyle: { borderColor: css("--surface-1"), borderWidth: 2 } }];
+      mount(cEl, opt);
+    }
   }
 
   async function vDecisions() {

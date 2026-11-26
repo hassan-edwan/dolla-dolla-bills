@@ -36,6 +36,10 @@ def main():
     snap["/screens"] = Q.screens(con)
     for ind in uni:
         snap[f"/industry/{ind}"] = Q.industry(con, ind, uni)
+    sig = Q.signals_overview(con)
+    snap["/signals"] = sig
+    for m in (sig.get("months") or [])[-36:]:          # ranked candidates for the last 3 years of month-ends
+        snap[f"/signal_month/{m}"] = Q.signal_month(con, m)
     runs = Q.runs(con)
     snap["/runs"] = runs
     dec_ciks = []

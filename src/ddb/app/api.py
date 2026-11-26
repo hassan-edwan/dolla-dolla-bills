@@ -99,6 +99,24 @@ def industry(name: str):
         con.close()
 
 
+@app.get("/api/signals")
+def signals():
+    con = _con()
+    try:
+        return _json(Q.signals_overview(con))
+    finally:
+        con.close()
+
+
+@app.get("/api/signal_month/{month}")
+def signal_month(month: str):
+    con = _con()
+    try:
+        return _json(Q.signal_month(con, month))
+    finally:
+        con.close()
+
+
 @app.get("/api/runs")
 def runs():
     con = _con()

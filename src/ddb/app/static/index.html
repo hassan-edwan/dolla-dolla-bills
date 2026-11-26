@@ -11,11 +11,12 @@
 <header class="top">
   <h1>dolla-dolla-bills</h1>
   <nav class="tabs" role="tablist">
-    <button data-tab="overview" aria-selected="true">Overview</button>
+    <button data-tab="signals" aria-selected="true">Signals</button>
+    <button data-tab="company">Company</button>
     <button data-tab="universe">Universe &amp; screens</button>
     <button data-tab="industry">Industries</button>
-    <button data-tab="company">Company</button>
     <button data-tab="decisions">Model decisions</button>
+    <button data-tab="overview">Data sources</button>
   </nav>
   <div class="asof" title="Everything shown is limited to what was public at this moment">
     <label for="asof-date">As of</label>
@@ -23,6 +24,9 @@
     <input type="date" id="asof-date">
     <label class="toggle" title="Show how listings ended (outcome labels). These are hindsight; a model never sees them as inputs.">
       <input type="checkbox" id="hindsight"> hindsight labels
+    </label>
+    <label class="toggle" title="Show data whose signals did not predict returns in our tests (kept for context only)">
+      <input type="checkbox" id="context"> unvalidated context
     </label>
     <button class="iconbtn" id="theme" title="Toggle light/dark">◐</button>
   </div>

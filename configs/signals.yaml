@@ -1,0 +1,237 @@
+# Candidate return predictors. Each is computed monthly, point in time, and
+# validated on our own universe (src/ddb/features/validate.py).
+#   sign: expected direction (+1 = higher value -> higher future return)
+#   family: price | fundamental | event | insider | alternative
+#   prior: what the published evidence says (filled in from the research report)
+signals:
+  mom_12_1:
+    family: price
+    sign: 1
+    label: Momentum (12-1 month)
+    desc: Return from 12 months to 1 month ago
+    prior: works, cost-sensitive; crashes
+    role: pick
+  ind_mom:
+    family: price
+    sign: 1
+    label: Industry momentum
+    desc: Average 12-1 momentum of the company's industry
+    prior: works in older studies; not re-checked
+    role: pick
+  high_52w:
+    family: price
+    sign: 1
+    label: Near 52-week high
+    desc: Price / highest close of the past year
+    prior: mixed; not re-checked
+    role: pick
+  rev_1m:
+    family: price
+    sign: -1
+    label: 1-month return (reversal)
+    desc: Last month's return; short-term losers tend to bounce
+    prior: works gross at 1 month; costly turnover
+    role: pick
+  vol_60d:
+    family: price
+    sign: -1
+    label: Volatility (60d)
+    desc: Std. dev. of daily returns, 60 days
+    prior: 'short-leg only: avoid high-volatility names'
+    role: avoid
+  max_ret_21d:
+    family: price
+    sign: -1
+    label: Lottery (max daily return)
+    desc: Largest daily return last month
+    prior: 'short-leg only: avoid lottery stocks'
+    role: avoid
+  amihud:
+    family: price
+    sign: 1
+    label: Illiquidity (Amihud)
+    desc: Avg |return| per $ traded, 60 days
+    prior: liquidity premium mostly eaten by costs
+    role: context
+  size:
+    family: price
+    sign: -1
+    label: Size (log market cap)
+    desc: Smaller firms
+    prior: weak after costs
+    role: context
+  book_to_market:
+    family: fundamental
+    sign: 1
+    label: Book / market
+    desc: Equity / market cap
+    prior: near zero / negative since 2015 (value-weighted)
+    role: context
+  sales_to_price:
+    family: fundamental
+    sign: 1
+    label: Sales / price
+    desc: Annual revenue / market cap
+    prior: best valuation ranker for loss-making firms
+    role: pick
+  gross_prof:
+    family: fundamental
+    sign: 1
+    label: Gross profitability
+    desc: Gross profit / total assets (Novy-Marx)
+    prior: works since 2015 (0.94%/mo ex-microcaps, t 3.2); real long leg
+    role: pick
+  op_cf_assets:
+    family: fundamental
+    sign: 1
+    label: Cash profitability
+    desc: Operating cash flow / total assets
+    prior: profitability family; real long leg
+    role: pick
+  asset_growth:
+    family: fundamental
+    sign: -1
+    label: Asset growth
+    desc: Total assets vs a year earlier
+    prior: weak since 2015; short-leg only
+    role: avoid
+  accruals:
+    family: fundamental
+    sign: -1
+    label: Accruals
+    desc: (Net income − operating cash flow) / assets
+    prior: dead since 2015
+    role: context
+  net_issuance:
+    family: fundamental
+    sign: -1
+    label: Share issuance (12m)
+    desc: Change in shares outstanding over a year
+    prior: 'works (t 2.8) but mostly short leg: avoid diluters'
+    role: avoid
+  cash_runway:
+    family: fundamental
+    sign: 1
+    label: Cash runway
+    desc: Cash / annual operating cash burn (capped; profitable = max)
+    prior: no published test
+    role: context
+  sue:
+    family: event
+    sign: 1
+    label: Earnings surprise (SUE)
+    desc: Quarterly EPS vs same quarter last year, scaled
+    prior: weak after 2006 outside microcaps
+    role: context
+  ear:
+    family: event
+    sign: 1
+    label: Earnings-day return
+    desc: 3-day market-adjusted return around the latest results 8-K
+    prior: works since 2015 (0.40-0.79%/mo); real long leg
+    role: pick
+  offerings_12m:
+    family: event
+    sign: -1
+    label: Equity offerings (12m)
+    desc: Shelf/prospectus filings in the past year
+    prior: 'issuance/financing family: avoid'
+    role: avoid
+  late_filings_12m:
+    family: event
+    sign: -1
+    label: Late filings (12m)
+    desc: NT 10-K/10-Q notices in the past year
+    prior: no published test (distress proxy)
+    role: avoid
+  going_concern:
+    family: event
+    sign: -1
+    label: Going-concern warning
+    desc: Filing mentions substantial doubt about continuing (1y)
+    prior: no published test (distress proxy)
+    role: avoid
+  insider_opp_net:
+    family: insider
+    sign: 1
+    label: Opportunistic insider buying
+    desc: Non-routine open-market buys minus sales, 90d, / market cap
+    prior: real but short-lived (1-5 days after filing)
+    role: pick
+  insider_buyers:
+    family: insider
+    sign: 1
+    label: Insider buyer cluster
+    desc: Distinct insiders with open-market buys, 90d
+    prior: no extra effect from clusters
+    role: context
+  congress_net:
+    family: alternative
+    sign: 1
+    label: Congressional net buying
+    desc: Disclosed buys minus sells, 180d
+    prior: does not work from disclosure date
+    role: context
+  contracts_rev:
+    family: alternative
+    sign: 1
+    label: Gov. contracts / revenue
+    desc: Federal obligations, 12m, / revenue
+    prior: announcement-day only; weak
+    role: context
+  news_volume:
+    family: alternative
+    sign: 1
+    label: News volume (30d)
+    desc: log articles naming the company
+    prior: 'attention: short-term pressure then reversal'
+    role: context
+  news_tone:
+    family: alternative
+    sign: 1
+    label: News tone (30d)
+    desc: Average GDELT tone
+    prior: moves prices for days, then reverses
+    role: context
+  wiki_attention:
+    family: alternative
+    sign: 1
+    label: Wikipedia attention shock
+    desc: Views last 30d vs prior 180d
+    prior: weak; spike after run-up is a warning
+    role: context
+  bottleneck_1y:
+    family: alternative
+    sign: -1
+    label: Bottleneck language (1y)
+    desc: Supply-constraint phrases in filings
+    prior: no published test
+    role: context
+  resid_mom:
+    family: price
+    sign: 1
+    label: Residual momentum
+    desc: 12-1 momentum of returns net of the market, scaled by residual volatility (Blitz-Huij-Martens)
+    prior: works; about 2x the Sharpe of raw momentum
+    role: pick
+  seasonality:
+    family: price
+    sign: 1
+    label: Same-month seasonality
+    desc: Average return in this calendar month in prior years (Heston-Sadka)
+    prior: works gross (Heston-Sadka); needs history
+    role: pick
+  days_to_cover:
+    family: event
+    sign: -1
+    label: Short interest (days to cover)
+    desc: Shares sold short / average daily volume (FINRA, by publication date)
+    prior: 'works (1.19%/mo EW 1988-2012), short leg: avoid crowded shorts'
+    role: avoid
+  short_pct:
+    family: event
+    sign: -1
+    label: Short interest (% of shares)
+    desc: Shares sold short / shares outstanding
+    prior: 'works, short leg: avoid'
+    role: avoid
