@@ -32,6 +32,7 @@ STEPS = [
      True, True, "SEC bulk files, Yahoo, FRED"),
     ("alpaca", [PY, "scripts/build_database.py", "--steps", "alpaca"], False, True, "Alpaca key (delisted prices)"),
     ("insiders", [PY, "scripts/build_database.py", "--steps", "insiders"], True, True, "sec.gov"),
+    ("addresses", [PY, "-m", "ddb.db.build_addresses"], True, True, "SEC bulk files"),
     ("screens", [PY, "-m", "ddb.db.build_screens"], True, True, ""),
     ("short_interest", [PY, "-m", "ddb.db.build_short_interest"], False, True, "finra.org"),
     ("filing_signals", [PY, "-m", "ddb.news.filing_signals"], False, True, "efts.sec.gov (slow)"),
