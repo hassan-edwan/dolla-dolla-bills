@@ -1,8 +1,9 @@
 """Alpaca market data (free account): asset list incl. delisted, daily and intraday
 (minute/hour) bars since 2016 (SIP feed; the free plan cannot query the last 15 minutes).
 
-Credentials come from the environment (APCA_API_KEY_ID / APCA_API_SECRET_KEY)
-or from ~/.config/ddb/alpaca.env. Never put them in the repo.
+Credentials come from the environment (APCA_API_KEY_ID / APCA_API_SECRET_KEY),
+from ~/.config/ddb/alpaca.env, or are added by a network proxy (DDB_ALPACA_VIA_PROXY=1,
+e.g. cloud-environment network secrets). Never put them in the repo.
 """
 from __future__ import annotations
 
@@ -24,7 +25,12 @@ def _creds() -> dict:
         vals = dict(line.strip().split("=", 1) for line in CRED_FILE.read_text().splitlines() if "=" in line)
         key, secret = vals.get("APCA_API_KEY_ID"), vals.get("APCA_API_SECRET_KEY")
     if not (key and secret):
-        raise RuntimeError(f"Alpaca credentials missing: set APCA_API_KEY_ID/APCA_API_SECRET_KEY or {CRED_FILE}")
+        if os.environ.get("DDB_ALPACA_VIA_PROXY"):
+            # The keys are added to each request by the network proxy (cloud environment
+            # network secrets); the values sent from here are placeholders it replaces.
+            return {"APCA-API-KEY-ID": "proxy", "APCA-API-SECRET-KEY": "proxy"}
+        raise RuntimeError(f"Alpaca credentials missing: set APCA_API_KEY_ID/APCA_API_SECRET_KEY or {CRED_FILE} "
+                           "(or DDB_ALPACA_VIA_PROXY=1 when a proxy adds them)")
     return {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
 
 

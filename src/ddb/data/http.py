@@ -11,12 +11,19 @@ import requests
 SEC_UA_ENV = "DDB_SEC_USER_AGENT"
 
 
+SEC_UA_FILE = os.path.expanduser("~/.config/ddb/sec_user_agent")
+
+
 def sec_user_agent() -> str:
+    """'project-name contact@email' from $DDB_SEC_USER_AGENT, else ~/.config/ddb/sec_user_agent."""
     ua = os.environ.get(SEC_UA_ENV)
+    if not ua and os.path.exists(SEC_UA_FILE):
+        with open(SEC_UA_FILE) as f:
+            ua = f.read().strip()
     if not ua:
         raise RuntimeError(
-            f"Set {SEC_UA_ENV} to 'project-name contact@email' before calling SEC EDGAR "
-            "(required by SEC fair-access rules)."
+            f"Set {SEC_UA_ENV} (or write {SEC_UA_FILE}) to 'project-name contact@email' before calling "
+            "SEC EDGAR (required by SEC fair-access rules)."
         )
     return ua
 
