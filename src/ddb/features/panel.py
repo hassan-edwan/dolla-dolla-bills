@@ -162,6 +162,15 @@ def inst_features(con, grid: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def optional(con, sql: str, cols: list[str]) -> pd.DataFrame:
+    """Rows from an optional source; an empty frame if its table isn't loaded."""
+    try:
+        return con.execute(sql).df()
+    except Exception as exc:  # noqa: BLE001 - CatalogException / missing Parquet files
+        print(f"  optional source missing ({str(exc).splitlines()[0][:90]}); its signals stay empty", flush=True)
+        return pd.DataFrame(columns=cols)
+
+
 # ------------------------------------------------------------------ build
 def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     t0 = time.time()
@@ -353,7 +362,7 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     ev = con.execute("SELECT cik, event_type, knowable_at AS k FROM events WHERE event_date >= DATE '2009-01-01'").df()
     grid["offerings_12m"] = window_sum(grid, ev[ev["event_type"].isin(["shelf_registration", "offering_prospectus"])], None, 365, "o")
     grid["late_filings_12m"] = window_sum(grid, ev[ev["event_type"].isin(["late_annual_report", "late_quarterly_report"])], None, 365, "l")
-    fts = con.execute("SELECT cik, phrase, signal, knowable_at AS k FROM filing_text_signals").df()
+    fts = optional(con, "SELECT cik, phrase, signal, knowable_at AS k FROM filing_text_signals", ["cik", "phrase", "signal", "k"])
     grid["going_concern"] = window_sum(grid, fts[fts["phrase"].str.contains("going concern")], None, 365, "gc")
     grid["bottleneck_1y"] = window_sum(grid, fts[fts["signal"] == "bottleneck"], None, 365, "b")
 
@@ -383,13 +392,15 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     # ---- alternative data
     print("alternative data ...", flush=True)
     tick = con.execute("SELECT DISTINCT upper(ticker) AS ticker, cik FROM tickers WHERE source IN ('sec_current','research')").df()
-    pol = con.execute("SELECT upper(ticker) AS ticker, transaction_type, knowable_at AS k FROM politician_trades").df() \
+    pol = optional(con, "SELECT upper(ticker) AS ticker, transaction_type, knowable_at AS k FROM politician_trades",
+                   ["ticker", "transaction_type", "k"]) \
         .merge(tick, on="ticker")
     pol["signed"] = np.where(pol["transaction_type"] == "buy", 1.0, -1.0)
     grid["congress_net"] = window_sum(grid, pol, "signed", 180, "cn")
-    gc = con.execute("SELECT cik, amount, knowable_at AS k FROM gov_contracts").df()
+    gc = optional(con, "SELECT cik, amount, knowable_at AS k FROM gov_contracts", ["cik", "amount", "k"])
     grid["contracts_rev"] = window_sum(grid, gc, "amount", 365, "gc") / grid["revenue"].where(grid["revenue"] > 0)
-    nw = con.execute("SELECT unnest(ciks) AS cik, tone, knowable_at AS k FROM news_events WHERE len(ciks) > 0").df()
+    nw = optional(con, "SELECT unnest(ciks) AS cik, tone, knowable_at AS k FROM news_events WHERE len(ciks) > 0",
+                  ["cik", "tone", "k"])
     if len(nw):
         nw["one"] = 1.0
         n30 = window_sum(grid, nw, "one", 30, "n")
