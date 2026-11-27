@@ -1,0 +1,476 @@
+{
+ "clear": {
+  "date": "2022-07-01",
+  "weights": [
+   {
+    "asset": "crypto_adj",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "energy",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "ev_battery",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "gene_biotech",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "nuclear",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "quantum",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "robotics_ai",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "space",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "tech",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "gold",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "tbills",
+    "from": 0.0,
+    "to": 0.0
+   }
+  ],
+  "cash_to": 0.0,
+  "attribution": {
+   "market": {},
+   "crypto_adj": {
+    "crypto_adj": -0.5,
+    "ev_battery": 0.5
+   },
+   "energy": {},
+   "ev_battery": {},
+   "gene_biotech": {
+    "ev_battery": 0.5,
+    "gene_biotech": -0.5
+   },
+   "nuclear": {
+    "ev_battery": 0.5,
+    "nuclear": -0.5
+   },
+   "quantum": {
+    "ev_battery": 0.5,
+    "quantum": -0.5
+   },
+   "robotics_ai": {
+    "ev_battery": 0.5,
+    "robotics_ai": -0.5
+   },
+   "space": {
+    "ev_battery": 0.5,
+    "space": -0.5
+   },
+   "tech": {
+    "ev_battery": 0.5,
+    "tech": -0.5
+   },
+   "gold": {},
+   "tbills": {},
+   "holdings": {}
+  },
+  "evidence": [
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__cand_score",
+    "plain": "average score of buy candidates",
+    "z": 10.0,
+    "raw": 87.2
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__median_score",
+    "plain": "median score of all screened stocks",
+    "z": 1.79,
+    "raw": 48.0
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": -1.44,
+    "raw": 0.0
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__ret_4w",
+    "plain": "4-week return",
+    "z": -1.27,
+    "raw": -0.3754
+   },
+   {
+    "group": "gene_biotech",
+    "feature": "gene_biotech__ret_26w",
+    "plain": "26-week return",
+    "z": -3.32,
+    "raw": -0.4306
+   },
+   {
+    "group": "gene_biotech",
+    "feature": "gene_biotech__trend",
+    "plain": "price vs its 200-day average",
+    "z": -3.25,
+    "raw": -0.3155
+   },
+   {
+    "group": "gene_biotech",
+    "feature": "gene_biotech__vol_12w",
+    "plain": "12-week volatility",
+    "z": 2.31,
+    "raw": 0.4612
+   },
+   {
+    "group": "gene_biotech",
+    "feature": "gene_biotech__ret_12w",
+    "plain": "12-week return",
+    "z": -2.19,
+    "raw": -0.2401
+   },
+   {
+    "group": "nuclear",
+    "feature": "nuclear__vol_12w",
+    "plain": "12-week volatility",
+    "z": 2.78,
+    "raw": 0.6246
+   },
+   {
+    "group": "nuclear",
+    "feature": "nuclear__ret_12w",
+    "plain": "12-week return",
+    "z": -2.04,
+    "raw": -0.2385
+   },
+   {
+    "group": "nuclear",
+    "feature": "nuclear__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": -1.73,
+    "raw": 0.2222
+   },
+   {
+    "group": "nuclear",
+    "feature": "nuclear__trend",
+    "plain": "price vs its 200-day average",
+    "z": -1.39,
+    "raw": -0.1179
+   },
+   {
+    "group": "quantum",
+    "feature": "quantum__ret_4w",
+    "plain": "4-week return",
+    "z": -4.02,
+    "raw": -0.3232
+   },
+   {
+    "group": "quantum",
+    "feature": "quantum__ret_26w",
+    "plain": "26-week return",
+    "z": -3.94,
+    "raw": -0.7305
+   },
+   {
+    "group": "quantum",
+    "feature": "quantum__trend",
+    "plain": "price vs its 200-day average",
+    "z": -3.8,
+    "raw": -0.611
+   },
+   {
+    "group": "quantum",
+    "feature": "quantum__ret_12w",
+    "plain": "12-week return",
+    "z": -3.7,
+    "raw": -0.4547
+   }
+  ],
+  "drawdown": -0.222,
+  "market_state": "caution",
+  "recent_4w_return": {
+   "crypto_adj": -0.3754,
+   "energy": -0.1681,
+   "ev_battery": -0.1285,
+   "gene_biotech": 0.0282,
+   "nuclear": -0.101,
+   "quantum": -0.3232,
+   "robotics_ai": -0.1525,
+   "space": -0.1926,
+   "tech": -0.1242,
+   "gold": -0.0346,
+   "tbills": -0.0001
+  }
+ },
+ "anonymized": {
+  "decision": "weekly allocation across sector baskets, a gold fund, a T-bill fund and cash",
+  "weights": [
+   {
+    "asset": "Sector E",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector F",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "Sector C",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "Sector G",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector D",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector I",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector H",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector A",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector B",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Gold fund",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "T-bill fund",
+    "from": 0.0,
+    "to": 0.0
+   }
+  ],
+  "cash_to": 0.0,
+  "drawdown_now": -0.222,
+  "market_state": "caution",
+  "recent_4w_return": {
+   "Sector E": -0.3754,
+   "Sector F": -0.1681,
+   "Sector C": -0.1285,
+   "Sector G": 0.0282,
+   "Sector D": -0.101,
+   "Sector I": -0.3232,
+   "Sector H": -0.1525,
+   "Sector A": -0.1926,
+   "Sector B": -0.1242,
+   "Gold fund": -0.0346,
+   "T-bill fund": -0.0001
+  },
+  "what_drove_it": [
+   {
+    "input_group": "Sector E",
+    "effect_on_weights": {
+     "Sector E": -0.5,
+     "Sector C": 0.5
+    }
+   },
+   {
+    "input_group": "Sector G",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector G": -0.5
+    }
+   },
+   {
+    "input_group": "Sector D",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector D": -0.5
+    }
+   },
+   {
+    "input_group": "Sector I",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector I": -0.5
+    }
+   },
+   {
+    "input_group": "Sector H",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector H": -0.5
+    }
+   },
+   {
+    "input_group": "Sector A",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector A": -0.5
+    }
+   },
+   {
+    "input_group": "Sector B",
+    "effect_on_weights": {
+     "Sector C": 0.5,
+     "Sector B": -0.5
+    }
+   }
+  ],
+  "evidence": [
+   {
+    "input_group": "Sector E",
+    "measure": "average score of buy candidates",
+    "standardized": 10.0,
+    "reading": "far above normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "median score of all screened stocks",
+    "standardized": 1.79,
+    "reading": "well above normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": -1.44,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "4-week return",
+    "standardized": -1.27,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector G",
+    "measure": "26-week return",
+    "standardized": -3.32,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector G",
+    "measure": "price vs its 200-day average",
+    "standardized": -3.25,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector G",
+    "measure": "12-week volatility",
+    "standardized": 2.31,
+    "reading": "far above normal"
+   },
+   {
+    "input_group": "Sector G",
+    "measure": "12-week return",
+    "standardized": -2.19,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector D",
+    "measure": "12-week volatility",
+    "standardized": 2.78,
+    "reading": "far above normal"
+   },
+   {
+    "input_group": "Sector D",
+    "measure": "12-week return",
+    "standardized": -2.04,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector D",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": -1.73,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector D",
+    "measure": "price vs its 200-day average",
+    "standardized": -1.39,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector I",
+    "measure": "4-week return",
+    "standardized": -4.02,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector I",
+    "measure": "26-week return",
+    "standardized": -3.94,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector I",
+    "measure": "price vs its 200-day average",
+    "standardized": -3.8,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector I",
+    "measure": "12-week return",
+    "standardized": -3.7,
+    "reading": "far below normal"
+   }
+  ],
+  "notes": "Values are standardized against a long history (z-scores); 0 = normal. No dates or names are given on purpose."
+ },
+ "review_rules": {
+  "verdict": "review",
+  "scores": {
+   "consistency": 5,
+   "risk": 1,
+   "data_quality": 5
+  },
+  "flags": [
+   {
+    "type": "concentration",
+    "severity": "medium",
+    "text": "50% in Sector F alone"
+   },
+   {
+    "type": "concentration",
+    "severity": "medium",
+    "text": "50% in Sector C alone"
+   }
+  ],
+  "justification": "50% in Sector F alone; 50% in Sector C alone",
+  "reviewer": "rules"
+ }
+}

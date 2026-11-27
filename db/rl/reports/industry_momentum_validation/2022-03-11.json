@@ -1,0 +1,410 @@
+{
+ "clear": {
+  "date": "2022-03-11",
+  "weights": [
+   {
+    "asset": "crypto_adj",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "energy",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "ev_battery",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "gene_biotech",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "nuclear",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "quantum",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "robotics_ai",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "space",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "tech",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "gold",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "tbills",
+    "from": 0.0,
+    "to": 0.0
+   }
+  ],
+  "cash_to": 0.0,
+  "attribution": {
+   "market": {},
+   "crypto_adj": {},
+   "energy": {},
+   "ev_battery": {},
+   "gene_biotech": {},
+   "nuclear": {},
+   "quantum": {},
+   "robotics_ai": {},
+   "space": {},
+   "tech": {},
+   "gold": {},
+   "tbills": {},
+   "holdings": {}
+  },
+  "evidence": [
+   {
+    "group": "market",
+    "feature": "mkt__mkt_trend",
+    "plain": "market vs its 200-day average",
+    "z": -2.98,
+    "raw": -0.2006
+   },
+   {
+    "group": "market",
+    "feature": "mkt__points",
+    "plain": "stress points",
+    "z": 2.32,
+    "raw": 3.0
+   },
+   {
+    "group": "market",
+    "feature": "mkt__crash_state",
+    "plain": "momentum-crash state",
+    "z": 2.21,
+    "raw": 1.0
+   },
+   {
+    "group": "market",
+    "feature": "mkt__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": -1.91,
+    "raw": 0.3028
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": -1.44,
+    "raw": 0.0
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__trend",
+    "plain": "price vs its 200-day average",
+    "z": -0.96,
+    "raw": -0.565
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__ret_12w",
+    "plain": "12-week return",
+    "z": -0.85,
+    "raw": -0.4495
+   },
+   {
+    "group": "crypto_adj",
+    "feature": "crypto_adj__ret_4w",
+    "plain": "4-week return",
+    "z": -0.82,
+    "raw": -0.2326
+   },
+   {
+    "group": "energy",
+    "feature": "energy__ret_12w",
+    "plain": "12-week return",
+    "z": 1.41,
+    "raw": 0.1559
+   },
+   {
+    "group": "energy",
+    "feature": "energy__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": 1.32,
+    "raw": 0.8028
+   },
+   {
+    "group": "energy",
+    "feature": "energy__trend",
+    "plain": "price vs its 200-day average",
+    "z": 1.18,
+    "raw": 0.111
+   },
+   {
+    "group": "energy",
+    "feature": "energy__ret_4w",
+    "plain": "4-week return",
+    "z": 1.11,
+    "raw": 0.0747
+   },
+   {
+    "group": "ev_battery",
+    "feature": "ev_battery__trend",
+    "plain": "price vs its 200-day average",
+    "z": -2.4,
+    "raw": -0.2554
+   },
+   {
+    "group": "ev_battery",
+    "feature": "ev_battery__ret_12w",
+    "plain": "12-week return",
+    "z": -1.99,
+    "raw": -0.2248
+   },
+   {
+    "group": "ev_battery",
+    "feature": "ev_battery__ret_26w",
+    "plain": "26-week return",
+    "z": -1.89,
+    "raw": -0.2809
+   },
+   {
+    "group": "ev_battery",
+    "feature": "ev_battery__breadth",
+    "plain": "share of stocks above their 200-day average",
+    "z": -1.67,
+    "raw": 0.1467
+   }
+  ],
+  "drawdown": -0.0044,
+  "market_state": "stress",
+  "recent_4w_return": {
+   "crypto_adj": -0.2326,
+   "energy": 0.0747,
+   "ev_battery": -0.0999,
+   "gene_biotech": -0.0955,
+   "nuclear": 0.2249,
+   "quantum": -0.2045,
+   "robotics_ai": -0.1215,
+   "space": -0.1363,
+   "tech": -0.1202,
+   "gold": 0.0852,
+   "tbills": 0.0
+  }
+ },
+ "anonymized": {
+  "decision": "weekly allocation across sector baskets, a gold fund, a T-bill fund and cash",
+  "weights": [
+   {
+    "asset": "Sector E",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector F",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "Sector C",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector G",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector D",
+    "from": 0.5,
+    "to": 0.5
+   },
+   {
+    "asset": "Sector I",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector H",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector A",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Sector B",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "Gold fund",
+    "from": 0.0,
+    "to": 0.0
+   },
+   {
+    "asset": "T-bill fund",
+    "from": 0.0,
+    "to": 0.0
+   }
+  ],
+  "cash_to": 0.0,
+  "drawdown_now": -0.0044,
+  "market_state": "stress",
+  "recent_4w_return": {
+   "Sector E": -0.2326,
+   "Sector F": 0.0747,
+   "Sector C": -0.0999,
+   "Sector G": -0.0955,
+   "Sector D": 0.2249,
+   "Sector I": -0.2045,
+   "Sector H": -0.1215,
+   "Sector A": -0.1363,
+   "Sector B": -0.1202,
+   "Gold fund": 0.0852,
+   "T-bill fund": 0.0
+  },
+  "what_drove_it": [],
+  "evidence": [
+   {
+    "input_group": "Market regime",
+    "measure": "market vs its 200-day average",
+    "standardized": -2.98,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Market regime",
+    "measure": "stress points",
+    "standardized": 2.32,
+    "reading": "far above normal"
+   },
+   {
+    "input_group": "Market regime",
+    "measure": "momentum-crash state",
+    "standardized": 2.21,
+    "reading": "far above normal"
+   },
+   {
+    "input_group": "Market regime",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": -1.91,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": -1.44,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "price vs its 200-day average",
+    "standardized": -0.96,
+    "reading": "slightly below normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "12-week return",
+    "standardized": -0.85,
+    "reading": "slightly below normal"
+   },
+   {
+    "input_group": "Sector E",
+    "measure": "4-week return",
+    "standardized": -0.82,
+    "reading": "slightly below normal"
+   },
+   {
+    "input_group": "Sector F",
+    "measure": "12-week return",
+    "standardized": 1.41,
+    "reading": "well above normal"
+   },
+   {
+    "input_group": "Sector F",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": 1.32,
+    "reading": "well above normal"
+   },
+   {
+    "input_group": "Sector F",
+    "measure": "price vs its 200-day average",
+    "standardized": 1.18,
+    "reading": "well above normal"
+   },
+   {
+    "input_group": "Sector F",
+    "measure": "4-week return",
+    "standardized": 1.11,
+    "reading": "well above normal"
+   },
+   {
+    "input_group": "Sector C",
+    "measure": "price vs its 200-day average",
+    "standardized": -2.4,
+    "reading": "far below normal"
+   },
+   {
+    "input_group": "Sector C",
+    "measure": "12-week return",
+    "standardized": -1.99,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector C",
+    "measure": "26-week return",
+    "standardized": -1.89,
+    "reading": "well below normal"
+   },
+   {
+    "input_group": "Sector C",
+    "measure": "share of stocks above their 200-day average",
+    "standardized": -1.67,
+    "reading": "well below normal"
+   }
+  ],
+  "notes": "Values are standardized against a long history (z-scores); 0 = normal. No dates or names are given on purpose."
+ },
+ "review_rules": {
+  "verdict": "block",
+  "scores": {
+   "consistency": 5,
+   "risk": 1,
+   "data_quality": 5
+  },
+  "flags": [
+   {
+    "type": "concentration",
+    "severity": "medium",
+    "text": "50% in Sector F alone"
+   },
+   {
+    "type": "concentration",
+    "severity": "medium",
+    "text": "50% in Sector D alone"
+   },
+   {
+    "type": "stress_buying",
+    "severity": "high",
+    "text": "100% in sectors during a stress regime (the model has lost money in stress)"
+   }
+  ],
+  "justification": "50% in Sector F alone; 50% in Sector D alone; 100% in sectors during a stress regime (the model has lost money in stress)",
+  "reviewer": "rules"
+ }
+}

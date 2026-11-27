@@ -1,6 +1,6 @@
 {
- "saved_at": "2026-11-27T03:06:44Z",
- "code_commit": "f01c4a3",
+ "saved_at": "2026-11-27T03:16:06Z",
+ "code_commit": "10cfb93",
  "files": [
   {
    "path": "rl/exits.parquet",
@@ -85,6 +85,618 @@
   {
    "path": "rl/readiness.md",
    "bytes": 2801
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-02-11.json",
+   "bytes": 9125
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-02-11.png",
+   "bytes": 208879
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-03-11.json",
+   "bytes": 8217
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-03-11.png",
+   "bytes": 226174
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-04-08.json",
+   "bytes": 8013
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-04-08.png",
+   "bytes": 226542
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-05-06.json",
+   "bytes": 8826
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-05-06.png",
+   "bytes": 226799
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-06-03.json",
+   "bytes": 9194
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-06-03.png",
+   "bytes": 224742
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-07-01.json",
+   "bytes": 9120
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-07-01.png",
+   "bytes": 224385
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-07-29.json",
+   "bytes": 9041
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-07-29.png",
+   "bytes": 225458
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-08-26.json",
+   "bytes": 8154
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-08-26.png",
+   "bytes": 226900
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-09-23.json",
+   "bytes": 8792
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-09-23.png",
+   "bytes": 228113
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-10-21.json",
+   "bytes": 9234
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-10-21.png",
+   "bytes": 225956
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-11-18.json",
+   "bytes": 9142
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-11-18.png",
+   "bytes": 244114
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-12-16.json",
+   "bytes": 8146
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2022-12-16.png",
+   "bytes": 240584
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-01-13.json",
+   "bytes": 7726
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-01-13.png",
+   "bytes": 239515
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-02-10.json",
+   "bytes": 7789
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-02-10.png",
+   "bytes": 239433
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-03-10.json",
+   "bytes": 7609
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-03-10.png",
+   "bytes": 237880
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-04-06.json",
+   "bytes": 7580
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-04-06.png",
+   "bytes": 225880
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-05-05.json",
+   "bytes": 7489
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-05-05.png",
+   "bytes": 226239
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-06-02.json",
+   "bytes": 7604
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-06-02.png",
+   "bytes": 221732
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-06-30.json",
+   "bytes": 7594
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-06-30.png",
+   "bytes": 222419
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-07-28.json",
+   "bytes": 7693
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-07-28.png",
+   "bytes": 209127
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-08-25.json",
+   "bytes": 7638
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-08-25.png",
+   "bytes": 209075
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-09-22.json",
+   "bytes": 7583
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-09-22.png",
+   "bytes": 210588
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-10-20.json",
+   "bytes": 9198
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-10-20.png",
+   "bytes": 213775
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-11-17.json",
+   "bytes": 8927
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-11-17.png",
+   "bytes": 218347
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-12-15.json",
+   "bytes": 7503
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/2023-12-15.png",
+   "bytes": 220423
+  },
+  {
+   "path": "rl/reports/industry_momentum_validation/summary.json",
+   "bytes": 3528
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-02-11.json",
+   "bytes": 8282
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-02-11.png",
+   "bytes": 213388
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-03-11.json",
+   "bytes": 8356
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-03-11.png",
+   "bytes": 228162
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-04-08.json",
+   "bytes": 8413
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-04-08.png",
+   "bytes": 231197
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-05-06.json",
+   "bytes": 8465
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-05-06.png",
+   "bytes": 229487
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-06-03.json",
+   "bytes": 8360
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-06-03.png",
+   "bytes": 229138
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-07-01.json",
+   "bytes": 8333
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-07-01.png",
+   "bytes": 228910
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-07-29.json",
+   "bytes": 8260
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-07-29.png",
+   "bytes": 229019
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-08-26.json",
+   "bytes": 7659
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-08-26.png",
+   "bytes": 229905
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-09-23.json",
+   "bytes": 8228
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-09-23.png",
+   "bytes": 231961
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-10-21.json",
+   "bytes": 8112
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-10-21.png",
+   "bytes": 228903
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-11-18.json",
+   "bytes": 7299
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-11-18.png",
+   "bytes": 244858
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-12-16.json",
+   "bytes": 7422
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2022-12-16.png",
+   "bytes": 241606
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-01-13.json",
+   "bytes": 7224
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-01-13.png",
+   "bytes": 239688
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-02-10.json",
+   "bytes": 7314
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-02-10.png",
+   "bytes": 240791
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-03-10.json",
+   "bytes": 7445
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-03-10.png",
+   "bytes": 239670
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-04-06.json",
+   "bytes": 7468
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-04-06.png",
+   "bytes": 226973
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-05-05.json",
+   "bytes": 7448
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-05-05.png",
+   "bytes": 227451
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-06-02.json",
+   "bytes": 7441
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-06-02.png",
+   "bytes": 222497
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-06-30.json",
+   "bytes": 7448
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-06-30.png",
+   "bytes": 223056
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-07-28.json",
+   "bytes": 7376
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-07-28.png",
+   "bytes": 210890
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-08-25.json",
+   "bytes": 7142
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-08-25.png",
+   "bytes": 213258
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-09-22.json",
+   "bytes": 7250
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-09-22.png",
+   "bytes": 212302
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-10-20.json",
+   "bytes": 8103
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-10-20.png",
+   "bytes": 217725
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-11-17.json",
+   "bytes": 7441
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-11-17.png",
+   "bytes": 222334
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-12-15.json",
+   "bytes": 7251
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/2023-12-15.png",
+   "bytes": 223269
+  },
+  {
+   "path": "rl/reports/regime_rule_validation/summary.json",
+   "bytes": 3546
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-02-11.json",
+   "bytes": 7637
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-02-11.png",
+   "bytes": 209442
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-03-11.json",
+   "bytes": 7755
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-03-11.png",
+   "bytes": 226178
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-04-08.json",
+   "bytes": 7622
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-04-08.png",
+   "bytes": 226588
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-05-06.json",
+   "bytes": 7848
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-05-06.png",
+   "bytes": 226943
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-06-03.json",
+   "bytes": 7671
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-06-03.png",
+   "bytes": 224768
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-07-01.json",
+   "bytes": 7636
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-07-01.png",
+   "bytes": 223728
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-07-29.json",
+   "bytes": 7563
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-07-29.png",
+   "bytes": 224053
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-08-26.json",
+   "bytes": 7583
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-08-26.png",
+   "bytes": 227897
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-09-23.json",
+   "bytes": 7531
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-09-23.png",
+   "bytes": 227288
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-10-21.json",
+   "bytes": 7455
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-10-21.png",
+   "bytes": 226702
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-11-18.json",
+   "bytes": 7223
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-11-18.png",
+   "bytes": 243093
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-12-16.json",
+   "bytes": 7348
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2022-12-16.png",
+   "bytes": 239450
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-01-13.json",
+   "bytes": 7156
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-01-13.png",
+   "bytes": 237953
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-02-10.json",
+   "bytes": 7865
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-02-10.png",
+   "bytes": 243831
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-03-10.json",
+   "bytes": 7377
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-03-10.png",
+   "bytes": 237902
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-04-06.json",
+   "bytes": 7400
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-04-06.png",
+   "bytes": 225451
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-05-05.json",
+   "bytes": 7382
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-05-05.png",
+   "bytes": 225868
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-06-02.json",
+   "bytes": 7373
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-06-02.png",
+   "bytes": 220483
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-06-30.json",
+   "bytes": 7380
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-06-30.png",
+   "bytes": 221089
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-07-28.json",
+   "bytes": 7929
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-07-28.png",
+   "bytes": 215469
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-08-25.json",
+   "bytes": 7072
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-08-25.png",
+   "bytes": 211504
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-09-22.json",
+   "bytes": 7184
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-09-22.png",
+   "bytes": 210595
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-10-20.json",
+   "bytes": 7300
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-10-20.png",
+   "bytes": 215216
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-11-17.json",
+   "bytes": 7381
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-11-17.png",
+   "bytes": 218360
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-12-15.json",
+   "bytes": 7894
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/2023-12-15.png",
+   "bytes": 223393
+  },
+  {
+   "path": "rl/reports/trend_filter_validation/summary.json",
+   "bytes": 3548
   },
   {
    "path": "rl/sleeves.parquet",
@@ -224,7 +836,7 @@
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 434279671,
+ "total_bytes": 451821096,
  "readiness": {
   "ready": true,
   "blockers": 0
