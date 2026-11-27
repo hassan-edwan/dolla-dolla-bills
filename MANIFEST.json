@@ -1,86 +1,126 @@
 {
- "saved_at": "2026-11-27T01:57:22Z",
- "code_commit": "d8d236a",
+ "saved_at": "2026-11-27T03:06:44Z",
+ "code_commit": "f01c4a3",
  "files": [
   {
+   "path": "rl/exits.parquet",
+   "bytes": 5053
+  },
+  {
+   "path": "rl/fast/AVAIL.npy",
+   "bytes": 6959
+  },
+  {
+   "path": "rl/fast/CHURN.npy",
+   "bytes": 27452
+  },
+  {
+   "path": "rl/fast/COST.npy",
+   "bytes": 27452
+  },
+  {
+   "path": "rl/fast/INC.npy",
+   "bytes": 27452
+  },
+  {
+   "path": "rl/fast/MISS.npy",
+   "bytes": 248928
+  },
+  {
+   "path": "rl/fast/R.npy",
+   "bytes": 27452
+  },
+  {
+   "path": "rl/fast/Z.npy",
+   "bytes": 248928
+  },
+  {
+   "path": "rl/fast/dates.npy",
+   "bytes": 5104
+  },
+  {
+   "path": "rl/fast/meta.json",
+   "bytes": 2318
+  },
+  {
    "path": "rl/haven.parquet",
-   "bytes": 7657
+   "bytes": 7644
   },
   {
    "path": "rl/meta.json",
-   "bytes": 14361
+   "bytes": 14392
   },
   {
    "path": "rl/obs.parquet",
-   "bytes": 422875
+   "bytes": 421510
   },
   {
    "path": "rl/prices_close.parquet",
-   "bytes": 5452129
+   "bytes": 5502523
   },
   {
    "path": "rl/prices_dividends.parquet",
-   "bytes": 145475
+   "bytes": 146225
   },
   {
    "path": "rl/prices_high.parquet",
-   "bytes": 5501100
+   "bytes": 5558772
   },
   {
    "path": "rl/prices_low.parquet",
-   "bytes": 5479793
+   "bytes": 5536622
   },
   {
    "path": "rl/prices_open.parquet",
-   "bytes": 5410294
+   "bytes": 5463147
   },
   {
    "path": "rl/prices_volume.parquet",
-   "bytes": 5600254
+   "bytes": 5656067
   },
   {
    "path": "rl/readiness.json",
-   "bytes": 6808
+   "bytes": 7087
   },
   {
    "path": "rl/readiness.md",
-   "bytes": 2687
+   "bytes": 2801
   },
   {
    "path": "rl/sleeves.parquet",
-   "bytes": 15436
+   "bytes": 15495
   },
   {
    "path": "signals/composite_ic.parquet",
-   "bytes": 5987
+   "bytes": 5972
   },
   {
    "path": "signals/composite_quintiles.parquet",
-   "bytes": 11925
+   "bytes": 11815
   },
   {
    "path": "signals/daily/composite_daily.parquet",
-   "bytes": 564375
+   "bytes": 564890
   },
   {
    "path": "signals/daily/ic_daily.parquet",
-   "bytes": 5207244
+   "bytes": 5209186
   },
   {
    "path": "signals/daily/scores.parquet",
-   "bytes": 78551860
+   "bytes": 78578412
   },
   {
    "path": "signals/daily/validation.json",
-   "bytes": 46128
+   "bytes": 46498
   },
   {
    "path": "signals/ic_monthly.parquet",
-   "bytes": 120819
+   "bytes": 120813
   },
   {
    "path": "signals/panel.parquet",
-   "bytes": 59391945
+   "bytes": 59285697
   },
   {
    "path": "signals/quintiles_monthly.parquet",
@@ -88,11 +128,11 @@
   },
   {
    "path": "signals/scores.parquet",
-   "bytes": 81369298
+   "bytes": 81274654
   },
   {
    "path": "signals/validation.json",
-   "bytes": 64057
+   "bytes": 62129
   },
   {
    "path": "regime/regime.parquet",
@@ -104,27 +144,87 @@
   },
   {
    "path": "portfolio/equity.parquet",
-   "bytes": 103264
+   "bytes": 102874
   },
   {
    "path": "portfolio/snapshots.json",
-   "bytes": 913212
+   "bytes": 914831
   },
   {
    "path": "portfolio/summary.json",
-   "bytes": 1036
+   "bytes": 1038
   },
   {
    "path": "portfolio/targets.parquet",
-   "bytes": 23824
+   "bytes": 24058
   },
   {
    "path": "live/tracking.json",
-   "bytes": 37502
+   "bytes": 36873
+  },
+  {
+   "path": "store/month/R.npy",
+   "bytes": 76984588
+  },
+  {
+   "path": "store/month/X.npy",
+   "bytes": 76984588
+  },
+  {
+   "path": "store/month/dates.npy",
+   "bytes": 1656
+  },
+  {
+   "path": "store/month/industry.npy",
+   "bytes": 550017
+  },
+  {
+   "path": "store/month/liquid.npy",
+   "bytes": 550017
+  },
+  {
+   "path": "store/month/meta.json",
+   "bytes": 675
+  },
+  {
+   "path": "store/month/tradable.npy",
+   "bytes": 550017
+  },
+  {
+   "path": "store/month/y.npy",
+   "bytes": 4399240
+  },
+  {
+   "path": "store/events/offsets.npy",
+   "bytes": 23168
+  },
+  {
+   "path": "store/events/time.npy",
+   "bytes": 10485640
+  },
+  {
+   "path": "store/events/type.npy",
+   "bytes": 2621506
+  },
+  {
+   "path": "store/events/value.npy",
+   "bytes": 5242884
+  },
+  {
+   "path": "store/events/vocab.json",
+   "bytes": 1962
+  },
+  {
+   "path": "store/ids.npy",
+   "bytes": 23160
+  },
+  {
+   "path": "store/meta.json",
+   "bytes": 5172
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 255127603,
+ "total_bytes": 434279671,
  "readiness": {
   "ready": true,
   "blockers": 0

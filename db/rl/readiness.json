@@ -1,5 +1,5 @@
 {
- "built": "2026-11-27T01:56:19.070894+00:00",
+ "built": "2026-11-27T03:02:22.141360+00:00",
  "ready": true,
  "blockers": 0,
  "checks": [
@@ -49,7 +49,7 @@
    "check": "price coverage",
    "ok": true,
    "blocker": true,
-   "detail": "11 years since 2016 with >= 300 liquid tracked-industry names (need 8); per year: 2016: 755, 2017: 863, 2018: 973, 2019: 1038, 2020: 1239, 2021: 1627, 2022: 1450, 2023: 1404, 2024: 1499, 2025: 1622, 2026: 1604",
+   "detail": "11 years since 2016 with >= 300 liquid tracked-industry names (need 8); per year: 2016: 752, 2017: 861, 2018: 971, 2019: 1035, 2020: 1239, 2021: 1626, 2022: 1449, 2023: 1404, 2024: 1498, 2025: 1622, 2026: 1604",
    "fix": "python scripts/build_database.py --steps prices alpaca"
   },
   {
@@ -70,7 +70,7 @@
    "check": "out-of-sample composite history",
    "ok": true,
    "blocker": true,
-   "detail": "165 months (need 60); 18 proven signals",
+   "detail": "163 months (need 60); 17 proven signals",
    "fix": "python -m ddb.features.validate"
   },
   {
@@ -91,14 +91,21 @@
    "check": "clean prices",
    "ok": true,
    "blocker": true,
-   "detail": "3 zero/negative, 1,810 daily moves beyond +300%/-95%, 0 duplicate bars, of 9,107,202",
+   "detail": "3 zero/negative, 1,800 daily moves beyond +300%/-95%, 0 duplicate bars, of 9,083,840",
    "fix": "inspect with python scripts/db_report.py; refetch bad symbols with build_prices --only-missing"
+  },
+  {
+   "check": "no reused-ticker splices",
+   "ok": true,
+   "blocker": true,
+   "detail": "Alpaca series: 0 zero-volume placeholder bars, 0 series with a gap over 45 days",
+   "fix": "python -m ddb.db.clean_prices"
   },
   {
    "check": "core data current",
    "ok": true,
    "blocker": true,
-   "detail": "prices: ok (1.2 days); filings: ok (1.0 days); macro: ok (1.1 days)",
+   "detail": "prices: ok (1.3 days); filings: ok (1.0 days); macro: ok (1.1 days)",
    "fix": "rerun the database build (scripts/build_all.py)"
   },
   {
@@ -140,7 +147,7 @@
    "check": "haven income included",
    "ok": true,
    "blocker": true,
-   "detail": "T-bill ETF distributions in the RL price data: 39.83 per share over the sample (BIL, SGOV); without them T-bills show ~0% return",
+   "detail": "T-bill ETF distributions in the RL price data: 21.17 per share over the sample (BIL); without them T-bills show ~0% return",
    "fix": "python -m ddb.rl.dataset (needs corporate_actions dividends from build_prices)"
   },
   {
@@ -165,21 +172,21 @@
    "2013": 516,
    "2014": 588,
    "2015": 602,
-   "2016": 755,
-   "2017": 863,
-   "2018": 973,
-   "2019": 1038,
+   "2016": 752,
+   "2017": 861,
+   "2018": 971,
+   "2019": 1035,
    "2020": 1239,
-   "2021": 1627,
-   "2022": 1450,
+   "2021": 1626,
+   "2022": 1449,
    "2023": 1404,
-   "2024": 1499,
+   "2024": 1498,
    "2025": 1622,
    "2026": 1604
   },
   "missing_core": {
    "mom_12_1": 0.078,
-   "high_52w": 0.061,
+   "high_52w": 0.062,
    "vol_60d": 0.012,
    "gross_prof": 0.251,
    "op_cf_assets": 0.258,
@@ -191,7 +198,6 @@
   },
   "proven_monthly_signals": [
    "mom_12_1",
-   "ind_mom",
    "high_52w",
    "vol_60d",
    "max_ret_21d",
@@ -221,9 +227,13 @@
   },
   "bad_prices": {
    "non_positive": 3,
-   "jumps": 1810,
+   "jumps": 1800,
    "duplicates": 0,
-   "bars": 9107202
+   "bars": 9083840
+  },
+  "alpaca_series": {
+   "placeholder_bars": 0,
+   "series_with_gaps": 0
   },
   "rl_dates_per_split": {
    "train": 313,
