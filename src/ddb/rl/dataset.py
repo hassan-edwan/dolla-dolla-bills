@@ -97,6 +97,8 @@ def build(db_path=DB_PATH) -> dict:
     macro = con.execute("SELECT date, value FROM macro WHERE series = 'DGS3MO'").df()
     ciks_all = sorted(sleeves["cik"].unique()) if len(sleeves) else []
     divs = load_dividends(con, dcfg["start"], ciks=ciks_all, symbols=haven_syms)
+    from ..data.failures import ledger_from_outcomes
+    ledger = ledger_from_outcomes(con, {str(int(c)): int(c) for c in ciks_all})
     con.close()
     cal = W["close"].index
     dates = weekly_dates(cal, dcfg["start"])
@@ -171,6 +173,7 @@ def build(db_path=DB_PATH) -> dict:
         dv = divs.reindex(pd.DatetimeIndex(pd.to_datetime(idx))).fillna(0.0)
         dv.index.name = "date"
         dv.reset_index().to_parquet(OUT / "prices_dividends.parquet", index=False)
+    ledger.df.to_parquet(OUT / "exits.parquet", index=False)   # how each sleeve name's listing ended (settlement only)
     haven_pick = pd.DataFrame(asset_of).reindex(dates)
     haven_pick.index.name = "d"
     haven_pick.reset_index().to_parquet(OUT / "haven.parquet", index=False)

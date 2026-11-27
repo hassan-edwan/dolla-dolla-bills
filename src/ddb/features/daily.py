@@ -179,6 +179,31 @@ def event_features(con, cal, cols, ret: pd.DataFrame, fresh: int) -> dict[str, p
     return out
 
 
+STORE = DATA_DIR / "db" / "store" / "daily"
+
+
+def export_store(cal, cols, feats: dict, mask, fwd: dict, cost, industry) -> None:
+    """Full daily history as memory-mapped arrays for model training (ddb.store):
+    X [day, company, feature] raw values (public at that day's close), mask [day, company]
+    (liquid, tracked industry), y [day, company, horizon] forward returns entered at the
+    NEXT open (labels, never inputs), cost [day, company] round-trip cost, industry codes."""
+    STORE.mkdir(parents=True, exist_ok=True)
+    names = list(feats)
+    X = np.stack([feats[n].reindex(index=cal, columns=cols).to_numpy(np.float32) for n in names], axis=-1)
+    np.save(STORE / "X.npy", X)
+    np.save(STORE / "mask.npy", mask.reindex(index=cal, columns=cols).fillna(False).to_numpy(bool))
+    np.save(STORE / "y.npy", np.stack([fwd[h].reindex(index=cal, columns=cols).to_numpy(np.float32) for h in fwd], axis=-1))
+    np.save(STORE / "cost.npy", cost.reindex(index=cal, columns=cols).to_numpy(np.float32))
+    inds = sorted({x for x in pd.unique(industry.to_numpy().ravel()) if isinstance(x, str)})
+    code = {k: i for i, k in enumerate(inds)}
+    np.save(STORE / "industry.npy", industry.reindex(index=cal, columns=cols).apply(
+        lambda col: col.map(code)).fillna(-1).to_numpy(np.int8))
+    np.save(STORE / "ids.npy", np.asarray(cols, dtype=np.int64))
+    np.save(STORE / "dates.npy", cal.to_numpy().astype("datetime64[D]"))
+    (STORE / "meta.json").write_text(json.dumps({"features": names, "horizons": list(fwd), "industries": inds,
+                                                 "shape": list(X.shape)}))
+
+
 def build(db_path=DB_PATH) -> dict:
     t0 = time.time()
     cfg = load("short_term")["daily"]
@@ -279,6 +304,7 @@ def build(db_path=DB_PATH) -> dict:
     long.index.names = ["d", "cik"]
     long = long.reset_index().dropna(subset=["industry"])
     long.to_parquet(OUT / "scores.parquet", index=False)
+    export_store(cal, cols, {s: sl(feats[s]) for s in sigs}, mask, fwd, cost, industry.loc[keep])
 
     out = {"built": pd.Timestamp.now(tz="UTC").isoformat(), "horizons": hz, "primary_horizon": primary,
            "universe_rule": f"tracked industries, price >= ${liq['min_price']:g}, 20d $volume >= "

@@ -152,11 +152,15 @@ def build(db_path=DB_PATH) -> dict:
     con = connect(db_path, read_only=True)
     t = con.execute("SELECT cik, upper(current_tickers[1]) AS s FROM companies WHERE len(current_tickers) > 0").df()
     con.close()
+    from ..data.failures import ledger_from_outcomes
+    con = connect(db_path, read_only=True)
+    ledger = ledger_from_outcomes(con, {str(c): int(c) for c in cols})
+    con.close()
     costs = CostModel.from_config(sim_cfg["costs"])
     costs.measured = load_measured({s: str(c) for s, c in zip(t["s"], t["cik"])})
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        res = Backtester(data, Targets(targets), costs, settings) \
+        res = Backtester(data, Targets(targets), costs, settings, ledger) \
             .run(start=min(targets) if targets else None)
     eqs = res.equity
     dd = drawdown(eqs)

@@ -9,7 +9,9 @@ T-bills and cash, executed by the real backtester.
   The weights become per-stock targets (each sleeve's names, inverse-volatility
   weighted, from the latest month-end) that fill at the NEXT day's open, with
   spread + impact costs, T+1 settlement, the good-faith rule, wash sales and
-  yearly taxes (ddb.sim.engine.Backtester).
+  yearly taxes (ddb.sim.engine.Backtester). A holding whose prices end is settled by
+  how its listing ended (outcomes table): acquisitions at the last price, bankruptcies
+  at zero, forced delistings at 20%, unknown at 50%.
 - at the end of an episode, tax still owed on gains realized since the last
   January payment is subtracted from equity (and so from the last reward).
 - reward = log(equity_t+1 / equity_t)
@@ -86,6 +88,9 @@ class AllocatorEnv(_Base):
             p = p.set_index(p.columns[0])
             p.index = pd.to_datetime(p.index)
             px[f] = p
+        from ..data.failures import FailureLedger
+        ex_f = root / "exits.parquet"
+        self.ledger = FailureLedger(pd.read_parquet(ex_f)) if ex_f.exists() else FailureLedger()
         dv_f = root / "prices_dividends.parquet"
         if dv_f.exists():   # cash dividends on ex-dates (T-bill ETFs return almost only through these)
             dv = pd.read_parquet(dv_f).set_index("date")
@@ -193,7 +198,7 @@ class AllocatorEnv(_Base):
         data = PriceData(**P, dividends=dv)
         settings = SimSettings.from_config(self.sim_cfg)
         settings.initial_cash = self.cfg["env"]["initial_cash"]
-        self.bt = Backtester(data, _Hold(), CostModel.from_config(self.sim_cfg["costs"]), settings)
+        self.bt = Backtester(data, _Hold(), CostModel.from_config(self.sim_cfg["costs"]), settings, self.ledger)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             self._gen = self.bt.iterate(start=start, end=self.ep_end)

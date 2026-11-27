@@ -32,6 +32,33 @@ DEFAULT_RECOVERY = {
 }
 
 
+# outcomes table (how a listing ended) -> ledger event type
+OUTCOME_EVENT = {"acquired": "acquisition_completed", "went_private": "acquisition_completed",
+                 "bankrupt": "bankruptcy", "delisted_exchange": "delisting_exchange",
+                 "deregistered": "deregistration"}
+
+
+def ledger_from_outcomes(con, keys: dict) -> "FailureLedger":
+    """Ledger for simulator symbols from the outcomes table. keys: {simulator symbol: cik}.
+    Outcomes are labels (hindsight) and are used ONLY to settle a position after its
+    prices end, never as a model input. Unknown outcomes keep the simulator's default."""
+    if not keys:
+        return FailureLedger()
+    ciks = ",".join(str(int(c)) for c in set(keys.values()))
+    o = con.execute(f"""SELECT cik, arg_min(outcome, CASE method WHEN 'research' THEN 0 ELSE 1 END) AS outcome,
+                               max(exit_date) AS exit_date
+                        FROM outcomes WHERE cik IN ({ciks}) GROUP BY 1""").df()
+    by_cik = {int(r.cik): r for r in o.itertuples()}
+    rows = []
+    for sym, cik in keys.items():
+        r = by_cik.get(int(cik))
+        if r is None or r.outcome not in OUTCOME_EVENT:
+            continue
+        rows.append({"symbol": sym, "cik": int(cik), "event_type": OUTCOME_EVENT[r.outcome],
+                     "event_date": r.exit_date, "terminal_value": np.nan, "source": "outcomes", "notes": r.outcome})
+    return FailureLedger(pd.DataFrame(rows, columns=COLUMNS))
+
+
 class FailureLedger:
     def __init__(self, df: pd.DataFrame | None = None):
         df = pd.DataFrame(columns=COLUMNS) if df is None else df.copy()

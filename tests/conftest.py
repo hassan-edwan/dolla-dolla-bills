@@ -37,7 +37,9 @@ def synth(tmp_path_factory):
     from ddb.features import daily, panel, regime, validate
     from ddb.live import tracking
     from ddb.portfolio import model
-    from ddb.rl import dataset as rl_dataset, readiness, splits
+    from ddb.rl import dataset as rl_dataset, readiness, splits, fast
+    import ddb.store as store_pkg
+    import ddb.store.build as store_build
     root = tmp_path_factory.mktemp("synth")
     db = make_db(root, n=40, start="2016-01-04", end="2019-12-31")
     sig = root / "db" / "signals"
@@ -49,6 +51,9 @@ def synth(tmp_path_factory):
              (rl_dataset, "REGIME"): root / "db" / "regime" / "regime.parquet",
              (readiness, "DB"): root / "db", (readiness, "OUT"): root / "db" / "rl", (readiness, "DATA_DIR"): root,
              (splits, "LOG"): root / "db" / "rl" / "test_access.log",
+             (daily, "STORE"): root / "db" / "store" / "daily", (store_pkg, "ROOT"): root / "db" / "store",
+             (store_build, "ROOT"): root / "db" / "store", (store_build, "SIG"): sig,
+             (fast, "FAST"): root / "db" / "rl" / "fast",
              (splits, "OVERRIDE"): {"train": ["2017-01-01", "2018-06-30"], "validation": ["2018-07-01", "2019-03-31"],
                                     "test": ["2019-04-01", "2019-12-31"], "embargo_days": 35}}
     old = {k: getattr(*k) for k in saved}
@@ -64,6 +69,8 @@ def synth(tmp_path_factory):
         model.build(db_path=db)
         tracking.build(db_path=db)
         rl_dataset.build(db_path=db)
+        store_build.build(db_path=db)
+        fast.build(root=root / "db" / "rl", out=root / "db" / "rl" / "fast")
         yield root, db
     finally:
         os.chdir(cwd)
