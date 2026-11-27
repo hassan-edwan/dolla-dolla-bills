@@ -94,3 +94,47 @@ A learned policy must beat each of these on validation, after costs and taxes:
 
 `evaluate(policy, split)` runs any policy (a callable `(obs, env) -> weights`)
 through the same environment.
+
+## Model-ready store (`python -m ddb.store.build`)
+
+One company list (`ids.npy`, 2,879 companies) shared by every block, memory-mapped,
+so nothing loads until it is indexed:
+
+```python
+from ddb.store import Store
+st = Store()
+st.month.X[t, :, :]   # raw signals [month, company, signal]
+st.month.R[t, :, :]   # sign-adjusted percentile in [-0.5, 0.5] (0.5 = most favorable)
+st.month.y[t, :, 0]   # next-month return (label: never an input)
+st.month.liquid, st.month.tradable          # universe masks
+st.day.X, st.day.mask, st.day.y, st.day.cost # daily data points, same layout
+idx = st.split_index("month", "train", horizon_days=31)   # purged
+st.events.batch_before(ciks, t, k=32)        # each company's last 32 events public by t
+```
+
+The event index holds 1.3M dated facts (filing events, risk phrases, insider trades,
+results reports), sorted by company and public time, for attention-style models.
+Building the daily block needs `python -m ddb.features.daily` first (it writes the
+full daily history).
+
+## Fast environment (`ddb.rl.fast.FastAllocatorEnv`)
+
+Same observation, action and reward as `AllocatorEnv`, from precomputed weekly asset
+returns (dividends, exits settled by how each listing ended), costs and sleeve churn;
+B episodes stepped at once. About 450,000+ steps/s vs ~26 for the full backtester.
+Train here, evaluate the final policy in `AllocatorEnv`.
+
+Agreement with the full backtester on the real data (total return, same strategy):
+
+| Period | Strategy | Full | Fast |
+|---|---|---|---|
+| 2022-23 | equal industry sleeves | +15.8% | +15.0% |
+| 2022-23 | T-bills | +4.3% | +4.4% |
+| 2022-23 | 60% industries / 40% haven | +13.4% | +11.8% |
+| 2016-21 | equal industry sleeves | +58.9% | +50.2% |
+| 2016-21 | T-bills | +3.3% | +3.3% |
+
+The fast env runs ~1-1.5 points a year low on equities, mostly from its simpler tax
+(all short-term, average cost) vs the backtester's FIFO lots with long-term rates.
+"Hold" (NaN action) keeps the allocation while sleeves still refresh their names, so
+the backtester's frozen buy-and-hold has no exact counterpart.

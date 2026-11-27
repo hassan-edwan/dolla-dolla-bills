@@ -206,7 +206,8 @@ def run(db_path=DB_PATH) -> dict:
     try:
         z = con.execute("""
             WITH a AS (SELECT symbol, cik, date, coalesce(volume_raw, volume) AS v FROM prices WHERE source = 'alpaca'),
-                 g AS (SELECT symbol, cik, date - lag(date) OVER (PARTITION BY symbol, cik ORDER BY date) AS gap FROM a WHERE v > 0)
+                 g AS (SELECT symbol, cik, datediff('day', lag(date) OVER (PARTITION BY symbol, cik ORDER BY date), date) AS gap
+                       FROM a WHERE v > 0)
             SELECT (SELECT count(*) FROM a WHERE v = 0 OR v IS NULL),
                    (SELECT count(DISTINCT symbol || cik) FROM g WHERE gap > 45)""").fetchone()
         stats["alpaca_series"] = {"placeholder_bars": z[0], "series_with_gaps": z[1]}
