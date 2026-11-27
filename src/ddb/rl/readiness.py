@@ -238,6 +238,17 @@ def run(db_path=DB_PATH) -> dict:
                              f"weekly decisions per split {per}; {len(inds)} industry sleeves over {months} months"
                              + (f"; market/haven features missing on >5% of dates: {sorted(core_miss)}" if core_miss else
                                 "; market and haven features complete"), FIX["rl_dataset"]))
+        dvf = OUT / "prices_dividends.parquet"
+        hv = pd.read_parquet(OUT / "haven.parquet") if (OUT / "haven.parquet").exists() else pd.DataFrame()
+        tb = sorted(set(hv["tbills"].dropna())) if "tbills" in hv else []
+        paid = 0.0
+        if dvf.exists() and tb:
+            dv = pd.read_parquet(dvf)
+            paid = float(dv[[c for c in tb if c in dv]].sum().sum()) if any(c in dv for c in tb) else 0.0
+        checks.append(_check("haven income included", paid > 0,
+                             f"T-bill ETF distributions in the RL price data: {paid:,.2f} per share over the sample "
+                             f"({', '.join(tb) or 'no T-bill ETF'}); without them T-bills show ~0% return",
+                             "python -m ddb.rl.dataset (needs corporate_actions dividends from build_prices)"))
         if sparse:
             starts = {}
             for i in sparse:

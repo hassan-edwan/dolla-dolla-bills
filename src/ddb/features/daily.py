@@ -62,6 +62,34 @@ def load_bars(con, start: str) -> dict[str, pd.DataFrame]:
     return out
 
 
+def load_dividends(con, start: str, ciks=None, symbols=None) -> pd.DataFrame:
+    """Cash dividends per share on the ex-date (split-adjusted like the prices), wide:
+    columns = cik (via the company's current ticker) and/or ETF symbols. The backtester
+    credits them as cash; Yahoo prices are not dividend-adjusted, so without this a
+    T-bill ETF shows almost no return."""
+    df = con.execute(f"""
+        SELECT upper(a.symbol) AS symbol, CAST(a.date AS DATE) AS date, sum(a.value) AS value, c.cik
+        FROM corporate_actions a
+        LEFT JOIN (SELECT cik, upper(current_tickers[1]) AS sym FROM companies WHERE len(current_tickers) > 0) c
+          ON upper(a.symbol) = c.sym
+        WHERE a.type = 'dividend' AND a.date >= DATE '{start}' GROUP BY ALL""").df()
+    if df.empty:
+        return pd.DataFrame()
+    df["date"] = pd.to_datetime(df["date"])
+    parts = []
+    if ciks is not None:
+        d = df.dropna(subset=["cik"])
+        d = d[d["cik"].astype(int).isin(set(int(c) for c in ciks))]
+        parts.append(d.assign(key=d["cik"].astype(int).astype(str)))
+    if symbols is not None:
+        d = df[df["symbol"].isin([s.upper() for s in symbols])]
+        parts.append(d.assign(key=d["symbol"]))
+    if not parts:
+        return pd.DataFrame()
+    d = pd.concat(parts)
+    return d.pivot_table(index="date", columns="key", values="value", aggfunc="sum").sort_index()
+
+
 def place(cal: pd.DatetimeIndex, cols, ev: pd.DataFrame, value: str | None = None) -> pd.DataFrame:
     """Sum (or count) events onto the first trading day whose decision time is >= knowable_at.
     ev: cik, k (knowable_at, tz-aware or UTC-naive) [, value]."""

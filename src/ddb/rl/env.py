@@ -86,6 +86,13 @@ class AllocatorEnv(_Base):
             p = p.set_index(p.columns[0])
             p.index = pd.to_datetime(p.index)
             px[f] = p
+        dv_f = root / "prices_dividends.parquet"
+        if dv_f.exists():   # cash dividends on ex-dates (T-bill ETFs return almost only through these)
+            dv = pd.read_parquet(dv_f).set_index("date")
+            dv.index = pd.to_datetime(dv.index)
+            self.dividends = dv
+        else:
+            self.dividends = pd.DataFrame()
         self.px = px
         self.split = split
         self.lo, self.hi = open_split(split, allow_test=allow_test, who=f"AllocatorEnv({split})")
@@ -182,7 +189,8 @@ class AllocatorEnv(_Base):
         start = ep[0]
         lo = start - pd.Timedelta(days=400)   # history for liquidity / volatility estimates
         P = {f: v.loc[lo:self.ep_end + pd.Timedelta(days=10)] for f, v in self.px.items()}
-        data = PriceData(**P)
+        dv = self.dividends.loc[lo:self.ep_end + pd.Timedelta(days=10)] if len(self.dividends) else pd.DataFrame()
+        data = PriceData(**P, dividends=dv)
         settings = SimSettings.from_config(self.sim_cfg)
         settings.initial_cash = self.cfg["env"]["initial_cash"]
         self.bt = Backtester(data, _Hold(), CostModel.from_config(self.sim_cfg["costs"]), settings)

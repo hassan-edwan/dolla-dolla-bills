@@ -36,7 +36,7 @@ import pandas as pd
 from ..config import DATA_DIR, load
 from ..db.schema import connect
 from ..features import bars as B
-from ..features.daily import load_bars
+from ..features.daily import load_bars, load_dividends
 from .splits import periods
 
 OUT = DATA_DIR / "db" / "rl"
@@ -95,6 +95,8 @@ def build(db_path=DB_PATH) -> dict:
     haven_syms = [s for v in dcfg["haven"].values() for s in v]
     H = symbol_bars(con, haven_syms, dcfg["start"])
     macro = con.execute("SELECT date, value FROM macro WHERE series = 'DGS3MO'").df()
+    ciks_all = sorted(sleeves["cik"].unique()) if len(sleeves) else []
+    divs = load_dividends(con, dcfg["start"], ciks=ciks_all, symbols=haven_syms)
     con.close()
     cal = W["close"].index
     dates = weekly_dates(cal, dcfg["start"])
@@ -164,6 +166,11 @@ def build(db_path=DB_PATH) -> dict:
         a.columns = [str(c) for c in a.columns]
         b = H[f].reindex(index=a.index) if len(H[f]) else pd.DataFrame(index=a.index)
         a.join(b).reset_index().rename(columns={"index": "date"}).to_parquet(OUT / f"prices_{f}.parquet", index=False)
+    if len(divs):
+        idx = pd.read_parquet(OUT / "prices_close.parquet", columns=["date"])["date"]
+        dv = divs.reindex(pd.DatetimeIndex(pd.to_datetime(idx))).fillna(0.0)
+        dv.index.name = "date"
+        dv.reset_index().to_parquet(OUT / "prices_dividends.parquet", index=False)
     haven_pick = pd.DataFrame(asset_of).reindex(dates)
     haven_pick.index.name = "d"
     haven_pick.reset_index().to_parquet(OUT / "haven.parquet", index=False)

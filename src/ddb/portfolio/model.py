@@ -34,7 +34,7 @@ from ..config import DATA_DIR, load
 from ..data.prices import PriceData
 from ..db.schema import connect
 from ..features import bars as B
-from ..features.daily import load_bars
+from ..features.daily import load_bars, load_dividends
 from ..metrics import drawdown, drawdown_quantile, summary
 from ..sim.costs import CostModel
 from ..sim.engine import Backtester, SimSettings
@@ -82,6 +82,7 @@ def build(db_path=DB_PATH) -> dict:
     cand = {m: Q.signal_month(con, m, limit=10_000) for m in months}
     keep_ciks = sorted({r["cik"] for m in cand.values() for r in m["rows"] if r["verdict"] == "buy candidate"})
     W = load_bars(con, str(pd.Timestamp(cfg["start"]) - pd.Timedelta(days=400))[:10])
+    divs = load_dividends(con, cfg["start"], ciks=keep_ciks)
     scores = pd.read_parquet(SIG / "scores.parquet")
     con.close()
     cols = [c for c in keep_ciks if c in W["close"].columns]
@@ -144,7 +145,8 @@ def build(db_path=DB_PATH) -> dict:
 
     print("backtest ...", flush=True)
     names = [str(c) for c in cols]
-    data = PriceData(**{k: v.set_axis(names, axis=1) for k, v in px.items()})
+    data = PriceData(**{k: v.set_axis(names, axis=1) for k, v in px.items()},
+                     dividends=divs.reindex(columns=names) if len(divs) else pd.DataFrame())
     settings = SimSettings.from_config(sim_cfg)
     from ..db.build_spreads import load_measured
     con = connect(db_path, read_only=True)
