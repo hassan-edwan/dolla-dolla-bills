@@ -1,0 +1,248 @@
+{
+ "built": "2026-11-27T01:56:19.070894+00:00",
+ "ready": true,
+ "blockers": 0,
+ "checks": [
+  {
+   "check": "built: panel",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/signals/panel.parquet ok",
+   "fix": "python -m ddb.features.panel"
+  },
+  {
+   "check": "built: validation",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/signals/validation.json ok",
+   "fix": "python -m ddb.features.validate"
+  },
+  {
+   "check": "built: daily",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/signals/daily/validation.json ok",
+   "fix": "python -m ddb.features.daily"
+  },
+  {
+   "check": "built: regime",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/regime/regime.parquet ok",
+   "fix": "python -m ddb.db.build_macro && python -m ddb.features.regime"
+  },
+  {
+   "check": "built: portfolio",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/portfolio/summary.json ok",
+   "fix": "python -m ddb.portfolio.model"
+  },
+  {
+   "check": "built: rl_dataset",
+   "ok": true,
+   "blocker": true,
+   "detail": "db/rl/meta.json ok",
+   "fix": "python -m ddb.rl.dataset"
+  },
+  {
+   "check": "price coverage",
+   "ok": true,
+   "blocker": true,
+   "detail": "11 years since 2016 with >= 300 liquid tracked-industry names (need 8); per year: 2016: 755, 2017: 863, 2018: 973, 2019: 1038, 2020: 1239, 2021: 1627, 2022: 1450, 2023: 1404, 2024: 1499, 2025: 1622, 2026: 1604",
+   "fix": "python scripts/build_database.py --steps prices alpaca"
+  },
+  {
+   "check": "core signals filled",
+   "ok": true,
+   "blocker": true,
+   "detail": "missing share within the liquid universe (gross profitability: among companies with revenue): mom_12_1 8%, high_52w 6%, vol_60d 1%, gross_prof 25%, op_cf_assets 26%, net_issuance 22%",
+   "fix": "python scripts/build_database.py --steps fundamentals && python -m ddb.features.panel"
+  },
+  {
+   "check": "failed companies have prices",
+   "ok": true,
+   "blocker": true,
+   "detail": "456 of 629 exchange-listed companies that failed or delisted since 2016-01-01 have prices (72%; need 25%)",
+   "fix": "python -m ddb.db.build_alpaca && python -m ddb.db.build_dead_prices (free Alpaca key)"
+  },
+  {
+   "check": "out-of-sample composite history",
+   "ok": true,
+   "blocker": true,
+   "detail": "165 months (need 60); 18 proven signals",
+   "fix": "python -m ddb.features.validate"
+  },
+  {
+   "check": "regime inputs",
+   "ok": true,
+   "blocker": true,
+   "detail": "100.0% of trading days since 2016-01-01 have VIX, credit spread and breadth",
+   "fix": "python -m ddb.db.build_macro && python -m ddb.features.regime"
+  },
+  {
+   "check": "no-hindsight timestamps",
+   "ok": true,
+   "blocker": true,
+   "detail": "0 violations in 8 tables",
+   "fix": "fix the loader that wrote those rows (knowable_at must be >= the event time)"
+  },
+  {
+   "check": "clean prices",
+   "ok": true,
+   "blocker": true,
+   "detail": "3 zero/negative, 1,810 daily moves beyond +300%/-95%, 0 duplicate bars, of 9,107,202",
+   "fix": "inspect with python scripts/db_report.py; refetch bad symbols with build_prices --only-missing"
+  },
+  {
+   "check": "core data current",
+   "ok": true,
+   "blocker": true,
+   "detail": "prices: ok (1.2 days); filings: ok (1.0 days); macro: ok (1.1 days)",
+   "fix": "rerun the database build (scripts/build_all.py)"
+  },
+  {
+   "check": "optional: inst_holdings",
+   "ok": true,
+   "blocker": false,
+   "detail": "ok, 87.1 days old",
+   "fix": "python -m ddb.db.build_13f"
+  },
+  {
+   "check": "optional: intraday",
+   "ok": false,
+   "blocker": false,
+   "detail": "missing",
+   "fix": "python -m ddb.db.build_intraday && python -m ddb.features.intraday"
+  },
+  {
+   "check": "optional: spreads",
+   "ok": false,
+   "blocker": false,
+   "detail": "missing",
+   "fix": "python -m ddb.db.build_spreads"
+  },
+  {
+   "check": "optional: news_events",
+   "ok": false,
+   "blocker": false,
+   "detail": "missing",
+   "fix": "python -m ddb.news.gdelt (backfill: hpc/gdelt_backfill.sbatch)"
+  },
+  {
+   "check": "RL dataset",
+   "ok": true,
+   "blocker": true,
+   "detail": "weekly decisions per split {'train': 313, 'validation': 99, 'test': 147}; 9 industry sleeves over 145 months; market and haven features complete",
+   "fix": "python -m ddb.rl.dataset"
+  },
+  {
+   "check": "haven income included",
+   "ok": true,
+   "blocker": true,
+   "detail": "T-bill ETF distributions in the RL price data: 39.83 per share over the sample (BIL, SGOV); without them T-bills show ~0% return",
+   "fix": "python -m ddb.rl.dataset (needs corporate_actions dividends from build_prices)"
+  },
+  {
+   "check": "sparse industries",
+   "ok": false,
+   "blocker": false,
+   "detail": "few listed companies early on, so their features are mostly missing (masked in the environment): first buy candidate crypto_adj 2022-06-03, quantum never, space 2025-08-01",
+   "fix": "expected for young industries; consider dropping a sleeve that never has candidates"
+  },
+  {
+   "check": "test period untouched",
+   "ok": true,
+   "blocker": false,
+   "detail": "opened 0 times",
+   "fix": "pick a new test period after many looks"
+  }
+ ],
+ "stats": {
+  "names_per_year": {
+   "2011": 447,
+   "2012": 457,
+   "2013": 516,
+   "2014": 588,
+   "2015": 602,
+   "2016": 755,
+   "2017": 863,
+   "2018": 973,
+   "2019": 1038,
+   "2020": 1239,
+   "2021": 1627,
+   "2022": 1450,
+   "2023": 1404,
+   "2024": 1499,
+   "2025": 1622,
+   "2026": 1604
+  },
+  "missing_core": {
+   "mom_12_1": 0.078,
+   "high_52w": 0.061,
+   "vol_60d": 0.012,
+   "gross_prof": 0.251,
+   "op_cf_assets": 0.258,
+   "net_issuance": 0.223
+  },
+  "dead_since_train_start": {
+   "companies": 629,
+   "with_prices": 456
+  },
+  "proven_monthly_signals": [
+   "mom_12_1",
+   "ind_mom",
+   "high_52w",
+   "vol_60d",
+   "max_ret_21d",
+   "sales_to_price",
+   "gross_prof",
+   "op_cf_assets",
+   "net_issuance",
+   "cash_runway",
+   "sue",
+   "ear",
+   "offerings_12m",
+   "late_filings_12m",
+   "going_concern",
+   "resid_mom",
+   "short_pct",
+   "inst_own"
+  ],
+  "pit_violations": {
+   "filings public over 4 days before their filing date": 0,
+   "filings public before SEC accepted them": 0,
+   "financial facts public over 4 days before their filing date": 0,
+   "prices public before that day's close": 0,
+   "insider trades public before the trade (excluding rows flagged as suspect dates)": 0,
+   "events public over 4 days before their filing date": 0,
+   "macro values public on their own date": 0,
+   "13F holdings public before the quarter ended": 0
+  },
+  "bad_prices": {
+   "non_positive": 3,
+   "jumps": 1810,
+   "duplicates": 0,
+   "bars": 9107202
+  },
+  "rl_dates_per_split": {
+   "train": 313,
+   "validation": 99,
+   "test": 147
+  }
+ },
+ "splits": {
+  "train": [
+   "2016-01-01",
+   "2021-12-31"
+  ],
+  "validation": [
+   "2022-02-05",
+   "2023-12-31"
+  ],
+  "test": [
+   "2024-02-05",
+   "2026-11-27"
+  ]
+ }
+}

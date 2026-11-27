@@ -1,0 +1,2272 @@
+{
+ "built": "2026-11-27T01:41:15.191356+00:00",
+ "horizons": {
+  "fwd_1d": 1,
+  "fwd_5d": 5
+ },
+ "primary_horizon": "fwd_1d",
+ "universe_rule": "tracked industries, price >= $2, 20d $volume >= $1M; enter at the next open",
+ "signals": [
+  {
+   "signal": "ret_1d",
+   "sign": -1,
+   "label": "Yesterday's move (reversal)",
+   "desc": "Close-to-close return on the decision day",
+   "prior": "short-term reversal; strongest in illiquid names, mostly eaten by costs",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.0066448882856409135,
+     "t_stat": 3.146279768283936,
+     "hit_rate": 0.5304324612920448,
+     "ic_first_half": 0.008059888605083694,
+     "ic_second_half": 0.005229887966198134,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.0004948786741737897,
+      0.00031746364274566,
+      0.0003455743265142814,
+      0.0003303597945786198,
+      -0.0004989320097965751
+     ],
+     "long_leg": -0.0004989320097965751,
+     "cost": 0.005643746078140333,
+     "long_leg_net": -0.006142678087936908,
+     "top_trade_net": -0.006459544096736698,
+     "avg_names": 818.4319273892152,
+     "status": "predictive",
+     "edge_net": -0.006142678087936908,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.0068432987017435915,
+     "t_stat": 3.213712674425626,
+     "hit_rate": 0.5136290753607696,
+     "ic_first_half": 0.005911630131604801,
+     "ic_second_half": 0.007774967271882383,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0013791535338143189,
+      0.00042905900752412154,
+      0.0006718852890858667,
+      0.0007295782045434714,
+      -0.00045518685339825154
+     ],
+     "long_leg": -0.00045518685339825154,
+     "cost": 0.005645683786021483,
+     "long_leg_net": -0.006100870639419734,
+     "top_trade_net": -0.0049655313891581255,
+     "avg_names": 817.8001068947087,
+     "status": "predictive",
+     "edge_net": -0.006100870639419734,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.0066448882856409135,
+   "t_stat": 3.146279768283936,
+   "pays_after_costs": false,
+   "edge_net": -0.006142678087936908,
+   "turnover": 0.7619549448494936
+  },
+  {
+   "signal": "ret_5d",
+   "sign": -1,
+   "label": "5-day move (reversal)",
+   "desc": "Return over the last 5 trading days",
+   "prior": "weekly reversal (Lehmann 1990); weaker since 2000s, cost-sensitive",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.0005947546155662977,
+     "t_stat": 0.2797620359675617,
+     "hit_rate": 0.4861185264281901,
+     "ic_first_half": 0.0015175091943149244,
+     "ic_second_half": -0.00032799996318232837,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.00042732687031440513,
+      0.0003303462993621544,
+      0.00035913705482877806,
+      0.00023541337375000904,
+      -0.0004973199672432991
+     ],
+     "long_leg": -0.0004973199672432991,
+     "cost": 0.005635405044133389,
+     "long_leg_net": -0.006132725011376688,
+     "top_trade_net": -0.006449604690947286,
+     "avg_names": 818.43219434063,
+     "status": "not predictive",
+     "edge_net": -0.006132725011376688,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.0060127195630631,
+     "t_stat": 1.7915364073162703,
+     "hit_rate": 0.5080171031533939,
+     "ic_first_half": 0.004553178349828099,
+     "ic_second_half": 0.007472260776298102,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.001261259384025456,
+      0.0003631140490964749,
+      0.0006310926097994393,
+      0.0006658340118305597,
+      -0.00040176539555357703
+     ],
+     "long_leg": -0.00040176539555357703,
+     "cost": 0.005636783783546231,
+     "long_leg_net": -0.006038549179099808,
+     "top_trade_net": -0.0049032099288382,
+     "avg_names": 817.8001068947087,
+     "status": "weak",
+     "edge_net": -0.006038549179099808,
+     "pays_after_costs": false
+    }
+   },
+   "status": "not predictive",
+   "ic_mean": 0.0005947546155662977,
+   "t_stat": 0.2797620359675617,
+   "pays_after_costs": false,
+   "edge_net": -0.006132725011376688,
+   "turnover": 0.3376561101069888
+  },
+  {
+   "signal": "gap",
+   "sign": -1,
+   "label": "Opening gap",
+   "desc": "Open / previous close - 1 on the decision day",
+   "prior": "overnight gaps partly reverse intraday; large-cap evidence",
+   "role": "context",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.018105737173934204,
+     "t_stat": 8.99098440675267,
+     "hit_rate": 0.5734116390816871,
+     "ic_first_half": 0.024059117606748757,
+     "ic_second_half": 0.01215235674111965,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.0008889106351095549,
+      0.00011023560609778197,
+      0.00029380931547172233,
+      0.0003404585570237961,
+      0.00014096298006665347
+     ],
+     "long_leg": 0.00014096298006665347,
+     "cost": 0.005205648535885884,
+     "long_leg_net": -0.00506468555581923,
+     "top_trade_net": -0.005381551564619021,
+     "avg_names": 818.4319273892152,
+     "status": "predictive",
+     "edge_net": -0.00506468555581923,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.009054908301138946,
+     "t_stat": 4.7531581954233815,
+     "hit_rate": 0.5334045964724746,
+     "ic_first_half": 0.00966165129474358,
+     "ic_second_half": 0.008448165307534313,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0012472591046735104,
+      0.00041039469107408843,
+      0.0004988748295215543,
+      0.0007162097074571051,
+      -0.0003710304191183209
+     ],
+     "long_leg": -0.0003710304191183209,
+     "cost": 0.005207421942773749,
+     "long_leg_net": -0.00557845236189207,
+     "top_trade_net": -0.004443113111630462,
+     "avg_names": 817.8001068947087,
+     "status": "predictive",
+     "edge_net": -0.00557845236189207,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.018105737173934204,
+   "t_stat": 8.99098440675267,
+   "pays_after_costs": false,
+   "edge_net": -0.00506468555581923,
+   "turnover": 0.7515291323697262
+  },
+  {
+   "signal": "rel_volume",
+   "sign": 1,
+   "label": "Volume surge",
+   "desc": "Volume / 20-day average volume",
+   "prior": "high-volume return premium (Gervais-Kaniel-Mingelgrin 2001)",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.002312303163982854,
+     "t_stat": 2.0289428816951083,
+     "hit_rate": 0.5146823278163374,
+     "ic_first_half": 0.00483950738690882,
+     "ic_second_half": -0.00021490105894311242,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.00022688055619192286,
+      0.00017251005209694887,
+      0.00015343901201664374,
+      0.00022724362117419977,
+      -0.0003266353701611552
+     ],
+     "long_leg": -0.0003266353701611552,
+     "cost": 0.005173060706760813,
+     "long_leg_net": -0.005499696076921968,
+     "top_trade_net": -0.005814621466254143,
+     "avg_names": 818.1121195942338,
+     "status": "weak",
+     "edge_net": -0.005499696076921968,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.006926347341124906,
+     "t_stat": 4.032325497612946,
+     "hit_rate": 0.536878674505612,
+     "ic_first_half": 0.00448579938896636,
+     "ic_second_half": 0.00936689529328345,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0010804225966375878,
+      0.0003918743543638734,
+      0.0005290285168681933,
+      0.0005364108709207668,
+      -0.0003788650675164405
+     ],
+     "long_leg": -0.0003788650675164405,
+     "cost": 0.005173748280450558,
+     "long_leg_net": -0.005552613347966999,
+     "top_trade_net": -0.004417515270316885,
+     "avg_names": 817.4796900053448,
+     "status": "predictive",
+     "edge_net": -0.005552613347966999,
+     "pays_after_costs": false
+    }
+   },
+   "status": "weak",
+   "ic_mean": 0.002312303163982854,
+   "t_stat": 2.0289428816951083,
+   "pays_after_costs": false,
+   "edge_net": -0.005499696076921968,
+   "turnover": 0.5544827096628792
+  },
+  {
+   "signal": "close_loc",
+   "sign": 1,
+   "label": "Close near the day's high",
+   "desc": "(close - low) / (high - low)",
+   "prior": "mixed; practitioner signal",
+   "role": "context",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.011091321257202573,
+     "t_stat": 6.963037051211855,
+     "hit_rate": 0.5541911372130273,
+     "ic_first_half": 0.015808047820412053,
+     "ic_second_half": 0.006374594693993094,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.0005440077951720024,
+      -0.00010890108820641142,
+      5.285783549202976e-05,
+      0.00021241587286501695,
+      0.0003850447404287713
+     ],
+     "long_leg": 0.0003850447404287713,
+     "cost": 0.004838786359347251,
+     "long_leg_net": -0.00445374161891848,
+     "top_trade_net": -0.004771829694854325,
+     "avg_names": 817.8790710090764,
+     "status": "predictive",
+     "edge_net": -0.00445374161891848,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.002471904891554115,
+     "t_stat": 1.4427376643452234,
+     "hit_rate": 0.5269909139497595,
+     "ic_first_half": 0.002566853923387158,
+     "ic_second_half": 0.0023769558597210713,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0004360608657907684,
+      0.0002773013759831907,
+      5.961633310288216e-05,
+      3.9374750683577955e-05,
+      5.8189761466717e-05
+     ],
+     "long_leg": 5.8189761466717e-05,
+     "cost": 0.004839134282001797,
+     "long_leg_net": -0.00478094452053508,
+     "top_trade_net": -0.003644658436422912,
+     "avg_names": 817.2482629609834,
+     "status": "weak",
+     "edge_net": -0.00478094452053508,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.011091321257202573,
+   "t_stat": 6.963037051211855,
+   "pays_after_costs": false,
+   "edge_net": -0.00445374161891848,
+   "turnover": 0.795287084593477
+  },
+  {
+   "signal": "breakout_20d",
+   "sign": 1,
+   "label": "20-day breakout",
+   "desc": "Close / highest close of the prior 20 days",
+   "prior": "short-term trend (George-Hwang, shorter window untested)",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.02401085901548542,
+     "t_stat": 9.161986505653527,
+     "hit_rate": 0.5768820074746396,
+     "ic_first_half": 0.02208081952344371,
+     "ic_second_half": 0.025940898507527132,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.0008875018842828637,
+      -8.908525703623766e-05,
+      0.0003244039932297529,
+      0.00046884108622522293,
+      0.0001810927780531108
+     ],
+     "long_leg": 0.0001810927780531108,
+     "cost": 0.004424647377400876,
+     "long_leg_net": -0.004243554599347765,
+     "top_trade_net": -0.004562068711373977,
+     "avg_names": 816.5867592098239,
+     "status": "predictive",
+     "edge_net": -0.004243554599347765,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.022027528715763092,
+     "t_stat": 4.7454579258310625,
+     "hit_rate": 0.5700160342063068,
+     "ic_first_half": 0.015467612338705826,
+     "ic_second_half": 0.028587445092820362,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0016009066449586221,
+      0.00033335119577159177,
+      0.0005721026941664653,
+      0.0007350100601419164,
+      -4.205777290269816e-05
+     ],
+     "long_leg": -4.205777290269816e-05,
+     "cost": 0.004425590163291175,
+     "long_leg_net": -0.004467647936193873,
+     "top_trade_net": -0.003351051153586065,
+     "avg_names": 815.952699091395,
+     "status": "predictive",
+     "edge_net": -0.004467647936193873,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.02401085901548542,
+   "t_stat": 9.161986505653527,
+   "pays_after_costs": false,
+   "edge_net": -0.004243554599347765,
+   "turnover": 0.3333309040585451
+  },
+  {
+   "signal": "atr_pct",
+   "sign": -1,
+   "label": "Daily range (ATR %)",
+   "desc": "14-day average true range / close. Used to size positions and set stops",
+   "prior": "high-volatility names underperform; mainly a risk measure",
+   "role": "risk",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3746,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.04532245106150662,
+     "t_stat": 12.740042530984933,
+     "hit_rate": 0.5816871329418046,
+     "ic_first_half": 0.04039064030306787,
+     "ic_second_half": 0.05025426181994538,
+     "split": "2019-06-14",
+     "quintiles": [
+      -0.001307622323403939,
+      -4.370679785263382e-05,
+      0.00032572806446282696,
+      0.0005024379743613433,
+      0.0005185255087869371
+     ],
+     "long_leg": 0.0005185255087869371,
+     "cost": 0.002822764274172834,
+     "long_leg_net": -0.0023042387653858967,
+     "top_trade_net": -0.0026211184449564944,
+     "avg_names": 818.43219434063,
+     "status": "predictive",
+     "edge_net": -0.0023042387653858967,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3742,
+     "first_day": "2012-01-03",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.052052923601251314,
+     "t_stat": 8.024893546277626,
+     "hit_rate": 0.5769641902725815,
+     "ic_first_half": 0.03442936341364177,
+     "ic_second_half": 0.06967648378886086,
+     "split": "2019-06-12",
+     "quintiles": [
+      -0.0027189128004955856,
+      0.0002770218415521074,
+      0.0008486687540317328,
+      0.0009792450636907375,
+      0.0006058069642457839
+     ],
+     "long_leg": 0.0006058069642457839,
+     "cost": 0.0028220491779523244,
+     "long_leg_net": -0.0022162422137065405,
+     "top_trade_net": -0.0010809029634449327,
+     "avg_names": 817.8001068947087,
+     "status": "predictive",
+     "edge_net": -0.0022162422137065405,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.04532245106150662,
+   "t_stat": 12.740042530984933,
+   "pays_after_costs": false,
+   "edge_net": -0.0023042387653858967,
+   "turnover": 0.05037538384321229
+  },
+  {
+   "signal": "earnings_fresh",
+   "sign": 1,
+   "label": "Fresh earnings reaction",
+   "desc": "Market-adjusted 3-day return around results filed in the last 5 trading days",
+   "prior": "post-earnings drift is strongest in the first days",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 1567,
+     "first_day": "2012-01-25",
+     "last_day": "2026-11-23",
+     "ic_mean": 0.014179477144242631,
+     "t_stat": 3.675207872263744,
+     "hit_rate": 0.5341416719846841,
+     "ic_first_half": 0.014570869011568755,
+     "ic_second_half": 0.013788584501237083,
+     "split": "2020-08-03",
+     "quintiles": [
+      -0.00016361874963767586,
+      -0.00038194086753362425,
+      2.3569533950943214e-05,
+      -0.0001950988634307072,
+      0.0007061789320544613
+     ],
+     "long_leg": 0.0007061789320544613,
+     "cost": 0.004966700934578021,
+     "long_leg_net": -0.00426052200252356,
+     "top_trade_net": -0.004059956354060724,
+     "avg_names": 115.8174856413529,
+     "status": "predictive",
+     "edge_net": -0.00426052200252356,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 1564,
+     "first_day": "2012-01-25",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.013807033009789157,
+     "t_stat": 2.7150276765859944,
+     "hit_rate": 0.55306905370844,
+     "ic_first_half": 0.01923893227042235,
+     "ic_second_half": 0.008375133749155963,
+     "split": "2020-07-31",
+     "quintiles": [
+      0.0003503102962689556,
+      -0.00022079973586022883,
+      -0.001094809409761535,
+      -0.0010736776805624865,
+      0.0020593268685816317
+     ],
+     "long_leg": 0.0020593268685816317,
+     "cost": 0.004962123890141494,
+     "long_leg_net": -0.0029027970215598623,
+     "top_trade_net": -0.002401513970749805,
+     "avg_names": 115.90281329923273,
+     "status": "moderate",
+     "edge_net": -0.0029027970215598623,
+     "pays_after_costs": false
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.014179477144242631,
+   "t_stat": 3.675207872263744,
+   "pays_after_costs": false,
+   "edge_net": -0.00426052200252356,
+   "turnover": 0.2763771855743858
+  },
+  {
+   "signal": "offering_fresh",
+   "sign": -1,
+   "label": "New offering filed",
+   "desc": "Shelf registrations / prospectuses public in the last 5 trading days",
+   "prior": "announcement-window drop for equity issues",
+   "role": "avoid",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3714,
+     "first_day": "2012-01-06",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.007864436307119969,
+     "t_stat": 10.778034973032005,
+     "hit_rate": 0.5721593968766828,
+     "ic_first_half": 0.006656296900214282,
+     "ic_second_half": 0.009072575714025652,
+     "split": "2019-07-09",
+     "quintiles": [
+      -0.0016425261710218786,
+      null,
+      2.2714678415147535e-05,
+      null,
+      null
+     ],
+     "long_leg": null,
+     "cost": 0.0,
+     "long_leg_net": null,
+     "top_trade_net": 0.0,
+     "avg_names": 821.550619278406,
+     "status": "predictive",
+     "edge_net": 0.0016425261710218786,
+     "pays_after_costs": true
+    },
+    "fwd_5d": {
+     "days": 3710,
+     "first_day": "2012-01-06",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.009857820275317062,
+     "t_stat": 8.732300350836356,
+     "hit_rate": 0.5973045822102426,
+     "ic_first_half": 0.008439904303948085,
+     "ic_second_half": 0.011275736246686038,
+     "split": "2019-07-05",
+     "quintiles": [
+      -0.005410559205693072,
+      null,
+      7.303003137224066e-05,
+      null,
+      null
+     ],
+     "long_leg": null,
+     "cost": 0.0,
+     "long_leg_net": null,
+     "top_trade_net": 0.0,
+     "avg_names": 820.9164420485175,
+     "status": "predictive",
+     "edge_net": 0.005410559205693072,
+     "pays_after_costs": true
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.007864436307119969,
+   "t_stat": 10.778034973032005,
+   "pays_after_costs": true,
+   "edge_net": 0.0016425261710218786,
+   "turnover": null
+  },
+  {
+   "signal": "distress_fresh",
+   "sign": -1,
+   "label": "New distress filing",
+   "desc": "Going-concern language or a late-filing notice public in the last 5 trading days",
+   "prior": "distress news drifts down",
+   "role": "avoid",
+   "horizons": {
+    "fwd_1d": {
+     "days": 2420,
+     "first_day": "2012-01-31",
+     "last_day": "2026-11-24",
+     "ic_mean": 0.008746296636989741,
+     "t_stat": 9.259572299204573,
+     "hit_rate": 0.5921487603305785,
+     "ic_first_half": 0.007287123710662915,
+     "ic_second_half": 0.010205469563316564,
+     "split": "2021-07-07",
+     "quintiles": [
+      -0.005818305456020535,
+      null,
+      1.5874614986322935e-05,
+      null,
+      null
+     ],
+     "long_leg": null,
+     "cost": 0.0,
+     "long_leg_net": null,
+     "top_trade_net": 0.0,
+     "avg_names": 923.7429752066116,
+     "status": "predictive",
+     "edge_net": 0.005818305456020535,
+     "pays_after_costs": true
+    },
+    "fwd_5d": {
+     "days": 2414,
+     "first_day": "2012-01-31",
+     "last_day": "2026-11-18",
+     "ic_mean": 0.014432606020377815,
+     "t_stat": 10.096520619254541,
+     "hit_rate": 0.6375310687655343,
+     "ic_first_half": 0.010937820948339894,
+     "ic_second_half": 0.01792739109241574,
+     "split": "2021-07-06",
+     "quintiles": [
+      -0.027227402857226076,
+      null,
+      7.629932866354299e-05,
+      null,
+      null
+     ],
+     "long_leg": null,
+     "cost": 0.0,
+     "long_leg_net": null,
+     "top_trade_net": 0.0,
+     "avg_names": 923.0882352941177,
+     "status": "predictive",
+     "edge_net": 0.027227402857226076,
+     "pays_after_costs": true
+    }
+   },
+   "status": "predictive",
+   "ic_mean": 0.008746296636989741,
+   "t_stat": 9.259572299204573,
+   "pays_after_costs": true,
+   "edge_net": 0.005818305456020535,
+   "turnover": null
+  },
+  {
+   "signal": "insider_buy_fresh",
+   "sign": 1,
+   "label": "Fresh insider buying",
+   "desc": "Opportunistic open-market insider buys disclosed in the last 5 trading days (log $)",
+   "prior": "real but short-lived (1-5 days after the filing)",
+   "role": "pick",
+   "horizons": {
+    "fwd_1d": {
+     "days": 3712,
+     "first_day": "2012-01-03",
+     "last_day": "2026-10-07",
+     "ic_mean": -0.0022384755113875735,
+     "t_stat": -3.0949581346510406,
+     "hit_rate": 0.48195043103448276,
+     "ic_first_half": -0.0023662620760114012,
+     "ic_second_half": -0.0021106889467637454,
+     "split": "2019-05-21",
+     "quintiles": [
+      null,
+      null,
+      -6.13324279424937e-06,
+      null,
+      0.00026027635550884576
+     ],
+     "long_leg": 0.00026027635550884576,
+     "cost": 0.005652325297468202,
+     "long_leg_net": -0.005392048941959356,
+     "top_trade_net": -0.0056807346296383334,
+     "avg_names": 814.7766702586207,
+     "status": "wrong sign",
+     "edge_net": -0.005392048941959356,
+     "pays_after_costs": false
+    },
+    "fwd_5d": {
+     "days": 3712,
+     "first_day": "2012-01-03",
+     "last_day": "2026-10-07",
+     "ic_mean": -0.0030296188836558303,
+     "t_stat": -2.6378840346281676,
+     "hit_rate": 0.4703663793103448,
+     "ic_first_half": -0.003336047540669543,
+     "ic_second_half": -0.0027231902266421173,
+     "split": "2019-05-21",
+     "quintiles": [
+      null,
+      null,
+      -1.028843892650863e-05,
+      null,
+      -5.871854780552411e-05
+     ],
+     "long_leg": -5.871854780552411e-05,
+     "cost": 0.005652104120049936,
+     "long_leg_net": -0.00571082266785546,
+     "top_trade_net": -0.004391709794911203,
+     "avg_names": 814.5352909482758,
+     "status": "wrong sign",
+     "edge_net": -0.00571082266785546,
+     "pays_after_costs": false
+    }
+   },
+   "status": "wrong sign",
+   "ic_mean": -0.0022384755113875735,
+   "t_stat": -3.0949581346510406,
+   "pays_after_costs": false,
+   "edge_net": -0.005392048941959356,
+   "turnover": 0.1664956750389932
+  },
+  {
+   "signal": "news_spike",
+   "sign": -1,
+   "label": "News spike",
+   "desc": "Articles in the last 2 days vs the prior 30-day daily average (log ratio)",
+   "prior": "attention-driven buying, then reversal (Barber-Odean)",
+   "role": "context",
+   "horizons": {
+    "fwd_1d": {
+     "days": 0,
+     "status": "insufficient data"
+    },
+    "fwd_5d": {
+     "days": 0,
+     "status": "insufficient data"
+    }
+   },
+   "status": "insufficient data",
+   "ic_mean": null,
+   "t_stat": null,
+   "pays_after_costs": null,
+   "edge_net": null,
+   "turnover": null
+  },
+  {
+   "signal": "wiki_spike",
+   "sign": -1,
+   "label": "Attention spike",
+   "desc": "Wikipedia views yesterday vs the prior 30-day average (log ratio)",
+   "prior": "attention spikes after run-ups precede reversals",
+   "role": "context",
+   "horizons": {
+    "fwd_1d": {
+     "days": 0,
+     "status": "insufficient data"
+    },
+    "fwd_5d": {
+     "days": 0,
+     "status": "insufficient data"
+    }
+   },
+   "status": "insufficient data",
+   "ic_mean": null,
+   "t_stat": null,
+   "pays_after_costs": null,
+   "edge_net": null,
+   "turnover": null
+  }
+ ],
+ "composite": {
+  "fwd_1d": {
+   "days": 3475,
+   "first_day": "2013-02-01",
+   "last_day": "2026-11-24",
+   "ic_mean": 0.040031007754368984,
+   "t_stat": 15.10848941267011,
+   "hit_rate": 0.6146762589928058,
+   "ic_first_half": 0.03972433662832048,
+   "ic_second_half": 0.040337502429827116,
+   "split": "2019-12-26",
+   "quintiles": [
+    -0.0013366765856715787,
+    -3.4014185266263685e-05,
+    0.000266629875151705,
+    0.0004482156839283231,
+    0.0006504611004034772
+   ],
+   "long_leg": 0.0006504611004034772,
+   "cost": 0.003909216888396118,
+   "long_leg_net": -0.003258755787992641,
+   "top_trade_net": -0.0036189752555181517,
+   "avg_names": 853.4989928057554,
+   "status": "predictive",
+   "edge_net": -0.003258755787992641,
+   "pays_after_costs": false
+  },
+  "fwd_5d": {
+   "days": 3471,
+   "first_day": "2013-02-01",
+   "last_day": "2026-11-18",
+   "ic_mean": 0.03886621927068036,
+   "t_stat": 8.657759891958605,
+   "hit_rate": 0.6087582829155863,
+   "ic_first_half": 0.027234258690610816,
+   "ic_second_half": 0.050491479412627736,
+   "split": "2019-12-23",
+   "quintiles": [
+    -0.0024258423044946392,
+    0.00023565200514011765,
+    0.0005549607819444151,
+    0.0007619305351309422,
+    0.0008647751253145849
+   ],
+   "long_leg": 0.0008647751253145849,
+   "cost": 0.003909563490821413,
+   "long_leg_net": -0.0030447883655068276,
+   "top_trade_net": -0.002033887072554533,
+   "avg_names": 852.8579660040334,
+   "status": "predictive",
+   "edge_net": -0.0030447883655068276,
+   "pays_after_costs": false
+  }
+ },
+ "composite_signals_by_month": {
+  "2013-02": [
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-05": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-06": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-07": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-08": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-09": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-10": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-11": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2013-12": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-01": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-02": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-03": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-04": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-05": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-06": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-07": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2014-08": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2014-09": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2014-10": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-11": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2014-12": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-01": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-02": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2015-03": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-04": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-05": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-06": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2015-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-09": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2015-12": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2016-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-02": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-03": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-04": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2016-05": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct"
+  ],
+  "2016-06": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-07": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2016-09": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2016-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2016-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2016-12": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-02": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-05": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-06": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2017-09": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2017-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2017-12": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-02": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-05": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-06": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh"
+  ],
+  "2018-09": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2018-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2018-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh"
+  ],
+  "2018-12": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-02": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-05": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-06": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-08": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-09": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-10": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-11": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2019-12": [
+   "gap",
+   "rel_volume",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-02": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-05": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-06": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-09": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-10": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-11": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2020-12": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-01": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-02": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-03": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-04": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-05": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-06": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-07": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-08": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-09": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-10": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-11": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2021-12": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-01": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-02": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-03": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-04": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-05": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-06": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-07": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-08": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-09": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2022-12": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-01": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-02": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-03": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-04": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-05": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-06": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-07": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-08": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-09": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-10": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-11": [
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2023-12": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-01": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-02": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-03": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-04": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-05": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-06": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-07": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-08": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-09": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-10": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-11": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2024-12": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-01": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-02": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-03": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-04": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-05": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-06": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-07": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-08": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-09": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-10": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-11": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2025-12": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-01": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-02": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-03": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-04": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-05": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-06": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-07": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-08": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-09": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-10": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ],
+  "2026-11": [
+   "ret_1d",
+   "gap",
+   "close_loc",
+   "breakout_20d",
+   "atr_pct",
+   "earnings_fresh",
+   "offering_fresh",
+   "distress_fresh"
+  ]
+ },
+ "fresh_days": 5
+}

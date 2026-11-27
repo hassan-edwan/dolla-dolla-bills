@@ -1,0 +1,132 @@
+{
+ "saved_at": "2026-11-27T01:57:22Z",
+ "code_commit": "d8d236a",
+ "files": [
+  {
+   "path": "rl/haven.parquet",
+   "bytes": 7657
+  },
+  {
+   "path": "rl/meta.json",
+   "bytes": 14361
+  },
+  {
+   "path": "rl/obs.parquet",
+   "bytes": 422875
+  },
+  {
+   "path": "rl/prices_close.parquet",
+   "bytes": 5452129
+  },
+  {
+   "path": "rl/prices_dividends.parquet",
+   "bytes": 145475
+  },
+  {
+   "path": "rl/prices_high.parquet",
+   "bytes": 5501100
+  },
+  {
+   "path": "rl/prices_low.parquet",
+   "bytes": 5479793
+  },
+  {
+   "path": "rl/prices_open.parquet",
+   "bytes": 5410294
+  },
+  {
+   "path": "rl/prices_volume.parquet",
+   "bytes": 5600254
+  },
+  {
+   "path": "rl/readiness.json",
+   "bytes": 6808
+  },
+  {
+   "path": "rl/readiness.md",
+   "bytes": 2687
+  },
+  {
+   "path": "rl/sleeves.parquet",
+   "bytes": 15436
+  },
+  {
+   "path": "signals/composite_ic.parquet",
+   "bytes": 5987
+  },
+  {
+   "path": "signals/composite_quintiles.parquet",
+   "bytes": 11925
+  },
+  {
+   "path": "signals/daily/composite_daily.parquet",
+   "bytes": 564375
+  },
+  {
+   "path": "signals/daily/ic_daily.parquet",
+   "bytes": 5207244
+  },
+  {
+   "path": "signals/daily/scores.parquet",
+   "bytes": 78551860
+  },
+  {
+   "path": "signals/daily/validation.json",
+   "bytes": 46128
+  },
+  {
+   "path": "signals/ic_monthly.parquet",
+   "bytes": 120819
+  },
+  {
+   "path": "signals/panel.parquet",
+   "bytes": 59391945
+  },
+  {
+   "path": "signals/quintiles_monthly.parquet",
+   "bytes": 269401
+  },
+  {
+   "path": "signals/scores.parquet",
+   "bytes": 81369298
+  },
+  {
+   "path": "signals/validation.json",
+   "bytes": 64057
+  },
+  {
+   "path": "regime/regime.parquet",
+   "bytes": 385912
+  },
+  {
+   "path": "regime/summary.json",
+   "bytes": 945
+  },
+  {
+   "path": "portfolio/equity.parquet",
+   "bytes": 103264
+  },
+  {
+   "path": "portfolio/snapshots.json",
+   "bytes": 913212
+  },
+  {
+   "path": "portfolio/summary.json",
+   "bytes": 1036
+  },
+  {
+   "path": "portfolio/targets.parquet",
+   "bytes": 23824
+  },
+  {
+   "path": "live/tracking.json",
+   "bytes": 37502
+  }
+ ],
+ "skipped_too_large": [],
+ "total_bytes": 255127603,
+ "readiness": {
+  "ready": true,
+  "blockers": 0
+ }
+}

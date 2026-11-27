@@ -1,0 +1,46 @@
+{
+ "built": "2026-11-27T01:41:30.126231+00:00",
+ "thresholds": {
+  "stress_points": 3,
+  "caution_points": 2,
+  "vix_high": 30,
+  "vix_pct_high": 0.9,
+  "hy_oas_high": 6.0,
+  "hy_oas_jump_3m": 1.5,
+  "baa_high": 3.5,
+  "baa_jump_3m": 0.75,
+  "breadth_low": 0.35,
+  "crash_mkt_24m": 0.0,
+  "crash_vol_pct": 0.8
+ },
+ "by_regime": {
+  "calm": {
+   "months": 112,
+   "top20_vs_avg": 0.004656685844057539,
+   "ic": 0.0726826684522498,
+   "hit": 0.7232142857142857
+  },
+  "caution": {
+   "months": 42,
+   "top20_vs_avg": -0.0004270265184438046,
+   "ic": 0.04832632400569762,
+   "hit": 0.5952380952380952
+  },
+  "stress": {
+   "months": 9,
+   "top20_vs_avg": -0.019542342437653834,
+   "ic": -0.0407217301661163,
+   "hit": 0.3333333333333333
+  },
+  "momentum_in_crash_states": {
+   "months": 30,
+   "ic": 0.03858257807533696,
+   "ic_otherwise": 0.027999339714378964
+  }
+ },
+ "share_of_days": {
+  "calm": 0.715,
+  "caution": 0.224,
+  "stress": 0.062
+ }
+}
