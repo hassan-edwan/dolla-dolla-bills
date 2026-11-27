@@ -1,6 +1,6 @@
 # Data readiness: READY (0 blockers)
 
-Checked 2026-11-27T04:48 UTC. Splits: train 2016-01-01 → 2021-12-31, validation 2022-02-05 → 2023-12-31, test 2024-02-05 → 2026-11-27
+Checked 2026-11-27T19:49 UTC. Splits: train 2016-01-01 → 2021-12-31, validation 2022-02-05 → 2023-12-31, test 2024-02-05 → 2026-11-27
 
 | | Check | Detail | Fix |
 |---|---|---|---|
@@ -18,10 +18,10 @@ Checked 2026-11-27T04:48 UTC. Splits: train 2016-01-01 → 2021-12-31, validatio
 | ✅ | no-hindsight timestamps | 0 violations in 8 tables |  |
 | ✅ | clean prices | 3 zero/negative, 1,800 daily moves beyond +300%/-95%, 0 duplicate bars, of 9,083,840 |  |
 | ✅ | no reused-ticker splices | Alpaca series: 0 zero-volume placeholder bars, 0 series with a gap over 45 days |  |
-| ✅ | core data current | prices: ok (1.3 days); filings: ok (1.1 days); macro: ok (1.2 days) |  |
-| ✅ | optional: inst_holdings | ok, 87.2 days old |  |
+| ✅ | core data current | prices: ok (2.0 days); filings: ok (1.7 days); macro: ok (1.8 days) |  |
+| ✅ | optional: inst_holdings | ok, 87.8 days old |  |
 | ⚠️ | optional: intraday | missing | python -m ddb.db.build_intraday && python -m ddb.features.intraday |
-| ⚠️ | optional: spreads | stale, 3466.2 days old | python -m ddb.db.build_spreads |
+| ✅ | optional: spreads | ok, 26.8 days old |  |
 | ⚠️ | optional: news_events | missing | python -m ddb.news.gdelt (backfill: hpc/gdelt_backfill.sbatch) |
 | ✅ | RL dataset | weekly decisions per split {'train': 313, 'validation': 99, 'test': 147}; 9 industry sleeves over 145 months; market and haven features complete |  |
 | ✅ | haven income included | T-bill ETF distributions in the RL price data: 21.17 per share over the sample (BIL); without them T-bills show ~0% return |  |

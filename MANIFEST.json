@@ -1,5 +1,5 @@
 {
- "saved_at": "2026-11-27T16:45:19Z",
+ "saved_at": "2026-11-27T19:50:18Z",
  "code_commit": "6ec24f4",
  "files": [
   {
@@ -92,11 +92,11 @@
   },
   {
    "path": "rl/readiness.json",
-   "bytes": 7505
+   "bytes": 7499
   },
   {
    "path": "rl/readiness.md",
-   "bytes": 2970
+   "bytes": 2932
   },
   {
    "path": "rl/reports/industry_momentum_validation/2022-02-11.json",
@@ -724,19 +724,19 @@
   },
   {
    "path": "signals/daily/composite_daily.parquet",
-   "bytes": 564922
+   "bytes": 565458
   },
   {
    "path": "signals/daily/ic_daily.parquet",
-   "bytes": 5212366
+   "bytes": 5227066
   },
   {
    "path": "signals/daily/scores.parquet",
-   "bytes": 78578412
+   "bytes": 79599782
   },
   {
    "path": "signals/daily/validation.json",
-   "bytes": 46532
+   "bytes": 46526
   },
   {
    "path": "signals/ic_monthly.parquet",
@@ -768,15 +768,15 @@
   },
   {
    "path": "portfolio/equity.parquet",
-   "bytes": 102236
+   "bytes": 102244
   },
   {
    "path": "portfolio/snapshots.json",
-   "bytes": 913691
+   "bytes": 913659
   },
   {
    "path": "portfolio/summary.json",
-   "bytes": 1038
+   "bytes": 1036
   },
   {
    "path": "portfolio/targets.parquet",
@@ -885,10 +885,22 @@
   {
    "path": "spreads/2023.parquet",
    "bytes": 245806
+  },
+  {
+   "path": "spreads/2024.parquet",
+   "bytes": 252866
+  },
+  {
+   "path": "spreads/2025.parquet",
+   "bytes": 275246
+  },
+  {
+   "path": "spreads/2026.parquet",
+   "bytes": 271983
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 452452141,
+ "total_bytes": 454288766,
  "readiness": {
   "ready": true,
   "blockers": 0
