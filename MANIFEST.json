@@ -1,5 +1,5 @@
 {
- "saved_at": "2026-11-27T09:56:40Z",
+ "saved_at": "2026-11-27T14:28:00Z",
  "code_commit": "6ec24f4",
  "files": [
   {
@@ -872,11 +872,15 @@
   },
   {
    "path": "spreads/2020.parquet",
-   "bytes": 73805
+   "bytes": 210669
+  },
+  {
+   "path": "spreads/2021.parquet",
+   "bytes": 268795
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 451544204,
+ "total_bytes": 451949863,
  "readiness": {
   "ready": true,
   "blockers": 0
