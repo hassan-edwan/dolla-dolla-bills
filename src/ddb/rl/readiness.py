@@ -103,7 +103,7 @@ def run(db_path=DB_PATH) -> dict:
     # 2. price coverage per year (liquid universe in tracked industries)
     panel_f = DB / "signals" / "panel.parquet"
     if panel_f.exists():
-        p = pd.read_parquet(panel_f, columns=["d", "cik", "price_raw", "dollar_vol_20d"] + [
+        p = pd.read_parquet(panel_f, columns=["d", "cik", "price_raw", "dollar_vol_20d", "revenue"] + [
             c for c in cfg["core_signals"] if c not in ("ret_1d",)])
         p["d"] = pd.to_datetime(p["d"])
         liq = p[(p["price_raw"] >= 2) & (p["dollar_vol_20d"] >= 1e6)]
@@ -117,11 +117,14 @@ def run(db_path=DB_PATH) -> dict:
                              "python scripts/build_database.py --steps prices alpaca"))
         # 4. missing core signals
         rec = liq[liq["d"] >= tr0]
-        miss = {c: float(rec[c].isna().mean()) for c in cfg["core_signals"] if c in rec}
+        # a signal counts as missing only where it is defined: gross profitability needs revenue
+        # (pre-revenue companies have no gross margin to measure)
+        defined = {"gross_prof": rec["revenue"] > 0}
+        miss = {c: float(rec.loc[defined.get(c, slice(None)), c].isna().mean()) for c in cfg["core_signals"] if c in rec}
         bad = {c: round(v, 3) for c, v in miss.items() if v > cfg["max_missing_core"]}
         stats["missing_core"] = {c: round(v, 3) for c, v in miss.items()}
         checks.append(_check("core signals filled", not bad,
-                             "missing share within the liquid universe: " + ", ".join(f"{c} {v:.0%}" for c, v in miss.items())
+                             "missing share within the liquid universe (gross profitability: among companies with revenue): " + ", ".join(f"{c} {v:.0%}" for c, v in miss.items())
                              + (f"; above {cfg['max_missing_core']:.0%}: {bad}" if bad else ""),
                              "python scripts/build_database.py --steps fundamentals && python -m ddb.features.panel"))
 
