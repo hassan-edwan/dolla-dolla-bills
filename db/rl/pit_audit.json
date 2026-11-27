@@ -1,0 +1,43 @@
+{
+ "built": "2026-11-27T04:48:36.393890+00:00",
+ "reference": "stored",
+ "checks": [
+  {
+   "month": "2018-06-29",
+   "companies_stored": 1372,
+   "companies_rebuilt": 1372,
+   "companies_compared": 1372,
+   "only_in_stored": 0,
+   "only_in_rebuilt": 0,
+   "features_compared": 49,
+   "features_differing": {},
+   "identical": true,
+   "seconds": 95
+  },
+  {
+   "month": "2021-03-31",
+   "companies_stored": 1794,
+   "companies_rebuilt": 1794,
+   "companies_compared": 1794,
+   "only_in_stored": 0,
+   "only_in_rebuilt": 0,
+   "features_compared": 49,
+   "features_differing": {},
+   "identical": true,
+   "seconds": 137
+  },
+  {
+   "month": "2024-09-30",
+   "companies_stored": 2324,
+   "companies_rebuilt": 2324,
+   "companies_compared": 2324,
+   "only_in_stored": 0,
+   "only_in_rebuilt": 0,
+   "features_compared": 49,
+   "features_differing": {},
+   "identical": true,
+   "seconds": 211
+  }
+ ],
+ "passed": true
+}

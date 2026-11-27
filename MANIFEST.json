@@ -1,10 +1,10 @@
 {
- "saved_at": "2026-11-27T03:16:06Z",
- "code_commit": "10cfb93",
+ "saved_at": "2026-11-27T04:49:28Z",
+ "code_commit": "2ac1bdb",
  "files": [
   {
    "path": "rl/exits.parquet",
-   "bytes": 5053
+   "bytes": 5074
   },
   {
    "path": "rl/fast/AVAIL.npy",
@@ -48,43 +48,55 @@
   },
   {
    "path": "rl/meta.json",
-   "bytes": 14392
+   "bytes": 14385
   },
   {
    "path": "rl/obs.parquet",
-   "bytes": 421510
+   "bytes": 421501
+  },
+  {
+   "path": "rl/obs_mean.parquet",
+   "bytes": 559840
+  },
+  {
+   "path": "rl/obs_std.parquet",
+   "bytes": 561915
+  },
+  {
+   "path": "rl/pit_audit.json",
+   "bytes": 917
   },
   {
    "path": "rl/prices_close.parquet",
-   "bytes": 5502523
+   "bytes": 5510434
   },
   {
    "path": "rl/prices_dividends.parquet",
-   "bytes": 146225
+   "bytes": 146127
   },
   {
    "path": "rl/prices_high.parquet",
-   "bytes": 5558772
+   "bytes": 5560324
   },
   {
    "path": "rl/prices_low.parquet",
-   "bytes": 5536622
+   "bytes": 5538901
   },
   {
    "path": "rl/prices_open.parquet",
-   "bytes": 5463147
+   "bytes": 5470175
   },
   {
    "path": "rl/prices_volume.parquet",
-   "bytes": 5656067
+   "bytes": 5642738
   },
   {
    "path": "rl/readiness.json",
-   "bytes": 7087
+   "bytes": 7505
   },
   {
    "path": "rl/readiness.md",
-   "bytes": 2801
+   "bytes": 2970
   },
   {
    "path": "rl/reports/industry_momentum_validation/2022-02-11.json",
@@ -700,7 +712,7 @@
   },
   {
    "path": "rl/sleeves.parquet",
-   "bytes": 15495
+   "bytes": 15409
   },
   {
    "path": "signals/composite_ic.parquet",
@@ -712,11 +724,11 @@
   },
   {
    "path": "signals/daily/composite_daily.parquet",
-   "bytes": 564890
+   "bytes": 564922
   },
   {
    "path": "signals/daily/ic_daily.parquet",
-   "bytes": 5209186
+   "bytes": 5212366
   },
   {
    "path": "signals/daily/scores.parquet",
@@ -724,27 +736,27 @@
   },
   {
    "path": "signals/daily/validation.json",
-   "bytes": 46498
+   "bytes": 46532
   },
   {
    "path": "signals/ic_monthly.parquet",
-   "bytes": 120813
+   "bytes": 120838
   },
   {
    "path": "signals/panel.parquet",
-   "bytes": 59285697
+   "bytes": 56844688
   },
   {
    "path": "signals/quintiles_monthly.parquet",
-   "bytes": 269401
+   "bytes": 269393
   },
   {
    "path": "signals/scores.parquet",
-   "bytes": 81274654
+   "bytes": 81566215
   },
   {
    "path": "signals/validation.json",
-   "bytes": 62129
+   "bytes": 61647
   },
   {
    "path": "regime/regime.parquet",
@@ -752,15 +764,15 @@
   },
   {
    "path": "regime/summary.json",
-   "bytes": 945
+   "bytes": 949
   },
   {
    "path": "portfolio/equity.parquet",
-   "bytes": 102874
+   "bytes": 102236
   },
   {
    "path": "portfolio/snapshots.json",
-   "bytes": 914831
+   "bytes": 913691
   },
   {
    "path": "portfolio/summary.json",
@@ -768,7 +780,7 @@
   },
   {
    "path": "portfolio/targets.parquet",
-   "bytes": 24058
+   "bytes": 24207
   },
   {
    "path": "live/tracking.json",
@@ -797,6 +809,14 @@
   {
    "path": "store/month/meta.json",
    "bytes": 675
+  },
+  {
+   "path": "store/month/pit_iqr.npy",
+   "bytes": 26868
+  },
+  {
+   "path": "store/month/pit_median.npy",
+   "bytes": 26868
   },
   {
    "path": "store/month/tradable.npy",
@@ -833,10 +853,18 @@
   {
    "path": "store/meta.json",
    "bytes": 5172
+  },
+  {
+   "path": "spreads/2016.parquet",
+   "bytes": 123163
+  },
+  {
+   "path": "spreads/2017.parquet",
+   "bytes": 76058
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 451821096,
+ "total_bytes": 451054282,
  "readiness": {
   "ready": true,
   "blockers": 0

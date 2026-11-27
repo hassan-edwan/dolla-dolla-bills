@@ -1,5 +1,5 @@
 {
- "built": "2026-11-27T03:02:22.141360+00:00",
+ "built": "2026-11-27T04:48:47.057934+00:00",
  "ready": true,
  "blockers": 0,
  "checks": [
@@ -56,7 +56,7 @@
    "check": "core signals filled",
    "ok": true,
    "blocker": true,
-   "detail": "missing share within the liquid universe (gross profitability: among companies with revenue): mom_12_1 8%, high_52w 6%, vol_60d 1%, gross_prof 25%, op_cf_assets 26%, net_issuance 22%",
+   "detail": "missing share within the liquid universe (gross profitability: among companies with revenue): mom_12_1 8%, high_52w 6%, vol_60d 1%, gross_prof 24%, op_cf_assets 26%, net_issuance 22%",
    "fix": "python scripts/build_database.py --steps fundamentals && python -m ddb.features.panel"
   },
   {
@@ -70,7 +70,7 @@
    "check": "out-of-sample composite history",
    "ok": true,
    "blocker": true,
-   "detail": "163 months (need 60); 17 proven signals",
+   "detail": "163 months (need 60); 16 proven signals",
    "fix": "python -m ddb.features.validate"
   },
   {
@@ -105,14 +105,14 @@
    "check": "core data current",
    "ok": true,
    "blocker": true,
-   "detail": "prices: ok (1.3 days); filings: ok (1.0 days); macro: ok (1.1 days)",
+   "detail": "prices: ok (1.3 days); filings: ok (1.1 days); macro: ok (1.2 days)",
    "fix": "rerun the database build (scripts/build_all.py)"
   },
   {
    "check": "optional: inst_holdings",
    "ok": true,
    "blocker": false,
-   "detail": "ok, 87.1 days old",
+   "detail": "ok, 87.2 days old",
    "fix": "python -m ddb.db.build_13f"
   },
   {
@@ -126,7 +126,7 @@
    "check": "optional: spreads",
    "ok": false,
    "blocker": false,
-   "detail": "missing",
+   "detail": "stale, 3466.2 days old",
    "fix": "python -m ddb.db.build_spreads"
   },
   {
@@ -156,6 +156,13 @@
    "blocker": false,
    "detail": "few listed companies early on, so their features are mostly missing (masked in the environment): first buy candidate crypto_adj 2022-06-03, quantum never, space 2025-08-01",
    "fix": "expected for young industries; consider dropping a sleeve that never has candidates"
+  },
+  {
+   "check": "time-travel test",
+   "ok": true,
+   "blocker": true,
+   "detail": "3 past dates rebuilt from only what was public then (2018-06-29, 2021-03-31, 2024-09-30) vs the stored signals: identical",
+   "fix": "python -m ddb.rl.pit_audit --reference stored"
   },
   {
    "check": "test period untouched",
@@ -188,7 +195,7 @@
    "mom_12_1": 0.078,
    "high_52w": 0.062,
    "vol_60d": 0.012,
-   "gross_prof": 0.251,
+   "gross_prof": 0.242,
    "op_cf_assets": 0.258,
    "net_issuance": 0.223
   },
@@ -201,7 +208,6 @@
    "high_52w",
    "vol_60d",
    "max_ret_21d",
-   "sales_to_price",
    "gross_prof",
    "op_cf_assets",
    "net_issuance",
@@ -239,7 +245,8 @@
    "train": 313,
    "validation": 99,
    "test": 147
-  }
+  },
+  "identity_screens": "screens use today's addresses, codes and names (no history kept): about 3% of liquid company-months are excluded on that basis"
  },
  "splits": {
   "train": [
