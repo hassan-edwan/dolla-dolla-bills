@@ -138,3 +138,49 @@ The fast env runs ~1-1.5 points a year low on equities, mostly from its simpler 
 (all short-term, average cost) vs the backtester's FIFO lots with long-term rates.
 "Hold" (NaN action) keeps the allocation while sleeves still refresh their names, so
 the backtester's frozen buy-and-hold has no exact counterpart.
+
+## Decision explanations and reviewers (`python -m ddb.rl.explain`)
+
+For every Nth decision of a policy (`--policy regime_rule --split validation --every 4`):
+
+- **Attribution:** for each input group (market regime, each industry, gold, T-bills,
+  current holdings), set it to normal and ask the policy again; the change in each
+  weight is that group's contribution. Works for any policy `obs -> weights`.
+- **Report** (`data/db/rl/reports/<policy>_<split>/<date>.json` + `.png`):
+  - a clear version for people;
+  - an anonymized version for an LLM: sectors renamed "Sector A..", no dates or
+    names, standardized values only.
+  - Absolute macro levels (rates, yield curve, credit spread and VIX levels, 24-month
+    return) are left out because they date a report.
+
+  Each decision is also recorded in the decision log (Model decisions page), with
+  its attribution as factors and the no-hindsight check.
+- **Rule reviewer** (`ddb.rl.review.RuleReviewer`, always on), flags:
+  - concentration;
+  - sectors bought in a stress regime;
+  - turnover;
+  - implausible recent returns (bad data);
+  - adding to a collapsing sector.
+- **LLM reviewer** (`LLMReviewer`, `--llm`): any OpenAI-compatible endpoint (vLLM,
+  llama.cpp server), configured in `configs/review.yaml`.
+  - It returns a verdict (approve / review / block), 1–5 scores and flags, plus a
+    plain-language justification.
+  - An unreachable or broken reviewer yields "review", never "approve".
+- **Reviewers monitor; they are not a training reward.** A policy trained to please a
+  reviewer learns to sound right, not to make money.
+- **Trust LLM ratings only on decisions after the model's training cutoff.** Even
+  anonymized, market patterns can hint at the era, and the LLM knows what happened next.
+- **Measure a reviewer before trusting it:** `review.evaluate(reviewer, reports)`
+  plants faults (concentration, stress buying, an implausible return, buying a
+  collapsing sector) and counts detections and false alarms.
+
+On 2022-23 decisions of the regime and trend baselines, the rule reviewer:
+- caught 100% of each planted fault;
+- flagged 1–2 in 25 real decisions, all genuine 100–200% turnover swings when the
+  regime flipped.
+
+The industry-momentum baseline is flagged at every decision, correctly: it puts 50%
+in each of two sectors.
+
+The LLM reviewer is not measured yet. Serve the PLAN.md §6 local model, set
+`configs/review.yaml`, then run `evaluate(LLMReviewer(), reports)`.

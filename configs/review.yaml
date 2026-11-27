@@ -1,0 +1,19 @@
+# LLM reviewer for allocator decisions (ddb.rl.review). Any OpenAI-compatible chat
+# endpoint works: vLLM (`vllm serve <model>`) and llama.cpp (`llama-server`) both serve
+# /v1/chat/completions. PLAN.md §6: a local 14-32B open-weights model, 4-bit quantized.
+llm:
+  base_url: http://localhost:8000/v1
+  model: Qwen2.5-32B-Instruct
+  api_key_env: DDB_LLM_API_KEY      # only if the server requires a key (read from the environment)
+  temperature: 0
+  max_tokens: 900
+  timeout_s: 120
+  json_mode: true                   # ask the server for JSON output (vLLM and llama.cpp support it)
+
+rules:
+  max_single_sector: 0.40           # medium flag above, high flag above max_single_sector_high
+  max_single_sector_high: 0.60
+  max_equity_in_stress: 0.50
+  max_turnover: 1.0                 # sum of |weight changes| in one decision
+  implausible_4w_return: [-0.6, 1.0]
+  weak_trend_z: -1.5                # buying a sector whose trend is this far below normal
