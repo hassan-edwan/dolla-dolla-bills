@@ -119,7 +119,10 @@ def _process_chunk(args):
 
         acc = pd.to_datetime(fil["acceptanceDateTime"], utc=True, errors="coerce")
         fallback = (fil["filingDate"] + pd.Timedelta(hours=22)).dt.tz_localize("UTC")
-        fil["knowable_at"] = acc.fillna(fallback)
+        # Public at acceptance. An acceptance more than 4 days before the official filing date
+        # (beyond after-hours / weekend / holiday lag) is unreliable metadata: use the filing date.
+        early = acc < (fil["filingDate"] - pd.Timedelta(days=4)).dt.tz_localize("UTC")
+        fil["knowable_at"] = acc.where(~early, fallback).fillna(fallback)
         fil["acceptance"] = acc
         fil["reportDate"] = pd.to_datetime(fil["reportDate"], errors="coerce")
         fil = fil.rename(columns={"accessionNumber": "accession", "filingDate": "filing_date",

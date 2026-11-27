@@ -102,11 +102,13 @@ def test_readiness_flags_problems(synth):
     con = connect(db)
     con.execute("""INSERT INTO filings (cik, accession, form, filing_date, knowable_at)
                    VALUES (1001, 'bad', '10-Q', DATE '2019-05-01', TIMESTAMPTZ '2019-04-01 00:00:00+00')""")
+    con.execute("""INSERT INTO filings (cik, accession, form, filing_date, knowable_at)
+                   VALUES (1001, 'friday', '10-Q', DATE '2019-05-06', TIMESTAMPTZ '2019-05-03 23:00:00+00')""")   # normal
     con.close()
     r2 = readiness.run(db_path=db)
     pit = next(c for c in r2["checks"] if c["check"] == "no-hindsight timestamps")
-    assert not pit["ok"] and "filings public before their filing date: 1" in pit["detail"]
+    assert not pit["ok"] and "filings public over 4 days before their filing date: 1" in pit["detail"]
     con = connect(db)
-    con.execute("DELETE FROM filings WHERE accession = 'bad'")
+    con.execute("DELETE FROM filings WHERE accession IN ('bad', 'friday')")
     con.close()
     assert (root / "db" / "rl" / "readiness.md").read_text().startswith("# Data readiness: NOT READY")

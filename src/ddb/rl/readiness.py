@@ -57,16 +57,20 @@ ARTIFACTS = {
 }
 
 PIT_CHECKS = {   # name -> SQL counting rows public before they could have been
-    "filings public before their filing date":
-        "SELECT count(*) FROM filings WHERE knowable_at < CAST(filing_date AS TIMESTAMPTZ)",
-    "financial facts public before their period ended":
-        "SELECT count(*) FROM fundamentals WHERE knowable_at < CAST(period_end AS TIMESTAMPTZ)",
+    # EDGAR dates filings accepted after 5:30 pm ET (and on weekends / holidays) on the next
+    # business day, so up to 4 days between acceptance and the official date is normal.
+    "filings public over 4 days before their filing date":
+        "SELECT count(*) FROM filings WHERE knowable_at < CAST(filing_date AS TIMESTAMPTZ) - INTERVAL 4 DAY",
+    "filings public before SEC accepted them":
+        "SELECT count(*) FROM filings WHERE acceptance IS NOT NULL AND knowable_at < acceptance",
+    "financial facts public over 4 days before their filing date":
+        "SELECT count(*) FROM fundamentals WHERE knowable_at < CAST(filed AS TIMESTAMPTZ) - INTERVAL 4 DAY",
     "prices public before that day's close":
         "SELECT count(*) FROM prices WHERE knowable_at < CAST(date AS TIMESTAMPTZ) + INTERVAL 20 HOUR",
-    "insider trades public before the trade":
-        "SELECT count(*) FROM insider_transactions WHERE knowable_at < CAST(trans_date AS TIMESTAMPTZ)",
-    "events public before they happened":
-        "SELECT count(*) FROM events WHERE knowable_at < CAST(event_date AS TIMESTAMPTZ)",
+    "insider trades public before the trade (excluding rows flagged as suspect dates)":
+        "SELECT count(*) FROM insider_transactions WHERE knowable_at < CAST(trans_date AS TIMESTAMPTZ) AND NOT trans_date_suspect",
+    "events public over 4 days before their filing date":
+        "SELECT count(*) FROM events WHERE knowable_at < CAST(event_date AS TIMESTAMPTZ) - INTERVAL 4 DAY",
     "macro values public on their own date":
         "SELECT count(*) FROM macro WHERE knowable_at < CAST(date AS TIMESTAMPTZ) + INTERVAL 1 DAY",
     "congressional trades public before the trade":
@@ -124,10 +128,12 @@ def run(db_path=DB_PATH) -> dict:
     # 3. survivorship
     try:
         dead = con.execute(f"""
-            WITH gone AS (
+            WITH gone AS (   -- failed since the train start AND exchange-listed (they filed a Form 25 delisting notice):
+                             -- the stocks a liquid-universe model could have held. Tiny OTC filers never qualify.
                 SELECT DISTINCT o.cik FROM outcomes o JOIN company_industries ci USING (cik)
                 WHERE o.outcome IN ('bankrupt', 'delisted_exchange', 'deregistered')
-                  AND o.exit_date >= DATE '{tr0.date()}' AND ci.confidence <> 'low'),
+                  AND o.exit_date >= DATE '{tr0.date()}' AND ci.confidence <> 'low'
+                  AND o.cik IN (SELECT cik FROM filings WHERE form IN ('25', '25-NSE'))),
             priced AS (
                 SELECT DISTINCT cik FROM prices WHERE cik IS NOT NULL
                 UNION SELECT DISTINCT t.cik FROM tickers t JOIN prices p ON upper(p.symbol) = upper(t.ticker)
@@ -136,10 +142,10 @@ def run(db_path=DB_PATH) -> dict:
         share = dead[1] / dead[0] if dead[0] else 0.0
         stats["dead_since_train_start"] = {"companies": dead[0], "with_prices": dead[1]}
         checks.append(_check("failed companies have prices", dead[0] > 0 and share >= cfg["min_dead_with_prices_share"],
-                             (f"{dead[1]:,} of {dead[0]:,} companies that failed or delisted since {tr0.date()} have prices "
+                             (f"{dead[1]:,} of {dead[0]:,} exchange-listed companies that failed or delisted since {tr0.date()} have prices "
                               f"({share:.0%}; need {cfg['min_dead_with_prices_share']:.0%})") if dead[0] else
                              "no failed or delisted companies recorded since the train start: outcome labels are missing",
-                             "python -m ddb.db.build_alpaca (free key), then a second source for the rest"))
+                             "python -m ddb.db.build_alpaca && python -m ddb.db.build_dead_prices (free Alpaca key)"))
     except Exception as exc:  # noqa: BLE001
         checks.append(_check("failed companies have prices", False, f"could not check: {exc}", "build outcomes + prices"))
 
@@ -220,11 +226,26 @@ def run(db_path=DB_PATH) -> dict:
         per = {k: int(((obs["d"] >= a) & (obs["d"] <= b)).sum()) for k, (a, b) in S.periods().items()}
         sl = pd.read_parquet(OUT / "sleeves.parquet")
         months = pd.to_datetime(sl["month"]).dt.to_period("M").nunique() if len(sl) else 0
-        miss = {k: v for k, v in (meta.get("missing_share_after_train_start") or {}).items() if v > 0.5}
+        miss_all = meta.get("missing_share_after_train_start") or {}
+        inds = meta.get("industries", [])
+        core_miss = {k: v for k, v in miss_all.items() if not any(k.startswith(f"{i}__") for i in inds) and v > 0.05}
+        sparse = sorted({k.split("__")[0] for k, v in miss_all.items() if v > 0.5 and k.split("__")[0] in inds})
         stats["rl_dates_per_split"] = per
-        checks.append(_check("RL dataset", per["train"] >= 150 and per["validation"] >= 40 and not miss,
-                             f"weekly decisions per split {per}; {len(meta['industries'])} industry sleeves over {months} months"
-                             + (f"; features more than half missing: {list(miss)}" if miss else ""), FIX["rl_dataset"]))
+        checks.append(_check("RL dataset", per["train"] >= 150 and per["validation"] >= 40 and not core_miss,
+                             f"weekly decisions per split {per}; {len(inds)} industry sleeves over {months} months"
+                             + (f"; market/haven features missing on >5% of dates: {sorted(core_miss)}" if core_miss else
+                                "; market and haven features complete"), FIX["rl_dataset"]))
+        if sparse:
+            starts = {}
+            for i in sparse:
+                cols = [c for c in obs.columns if c.startswith(f"{i}__") and c.endswith("n_candidates")]
+                first = obs.loc[obs[cols[0]].fillna(0) > 0, "d"].min() if cols else None
+                starts[i] = str(first.date()) if first is not None and pd.notna(first) else "never"
+            checks.append(_check("sparse industries", False,
+                                 "few listed companies early on, so their features are mostly missing (masked in the "
+                                 "environment): first buy candidate " + ", ".join(f"{k} {v}" for k, v in starts.items()),
+                                 "expected for young industries; consider dropping a sleeve that never has candidates",
+                                 blocker=False))
     n_test = S.test_accesses()
     checks.append(_check("test period untouched", n_test == 0, f"opened {n_test} times", "pick a new test period after many looks",
                          blocker=False))

@@ -28,6 +28,13 @@ from ..db.schema import connect
 OUT = DATA_DIR / "db" / "signals"
 DB_PATH = DATA_DIR / "ddb.duckdb"
 FAIL_OUTCOMES = {"bankrupt", "delisted_exchange", "deregistered"}
+# XBRL names for revenue and cost of goods, most common first. Older US filers (pre-2018,
+# before ASC 606) used SalesRevenue*; IFRS filers use Revenue / CostOfSales.
+REVENUE = ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
+           "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueNet", "SalesRevenueGoodsNet",
+           "SalesRevenueServicesNet", "Revenue"]
+COGS = ["CostOfRevenue", "CostOfGoodsAndServicesSold", "CostOfGoodsSold", "CostOfSales", "CostOfServices",
+        "CostOfGoodsAndServiceExcludingDepreciationDepletionAndAmortization"]
 DELIST_RET = -0.30
 
 
@@ -259,8 +266,7 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     print("fundamentals ...", flush=True)
     inst = first_versions(con, ["Assets", "StockholdersEquity", "CashAndCashEquivalentsAtCarryingValue",
                                 "EntityCommonStockSharesOutstanding", "CommonStockSharesOutstanding"], annual=False)
-    ann = first_versions(con, ["GrossProfit", "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
-                               "CostOfRevenue", "CostOfGoodsAndServicesSold", "NetIncomeLoss",
+    ann = first_versions(con, ["GrossProfit", *REVENUE, *COGS, "NetIncomeLoss",
                                "NetCashProvidedByUsedInOperatingActivities"], annual=True)
     pick = lambda df, c: df[df["concept"] == c]
     grid["assets"] = asof(grid, pick(inst, "Assets"), "value", "assets", 550)
@@ -273,11 +279,11 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     grid12["t"] = grid12["t"] - pd.Timedelta(days=365)
     grid["shares_12m_ago"] = asof(grid12, sh, "value", "s12", 400)
     grid["assets_12m_ago"] = asof(grid12, pick(inst, "Assets"), "value", "a12", 550)
-    rev = pd.concat([pick(ann, "Revenues"), pick(ann, "RevenueFromContractWithCustomerExcludingAssessedTax")])
+    rev = pd.concat([pick(ann, c) for c in REVENUE])   # in order of preference: first per period wins
     rev = rev.sort_values("known").drop_duplicates(["cik", "period_end"])
     grid["revenue"] = asof(grid, rev, "value", "revenue", 550)
     gp = pick(ann, "GrossProfit")
-    cogs = pd.concat([pick(ann, "CostOfRevenue"), pick(ann, "CostOfGoodsAndServicesSold")]).drop_duplicates(["cik", "period_end"])
+    cogs = pd.concat([pick(ann, c) for c in COGS]).drop_duplicates(["cik", "period_end"])
     gp2 = rev.merge(cogs[["cik", "period_end", "value", "known"]], on=["cik", "period_end"], suffixes=("_r", "_c"))
     gp2 = pd.DataFrame({"cik": gp2["cik"], "period_end": gp2["period_end"], "value": gp2["value_r"] - gp2["value_c"],
                         "known": gp2[["known_r", "known_c"]].max(axis=1)})

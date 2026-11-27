@@ -1,4 +1,5 @@
-"""Daily prices for every ticker in the company database (Yahoo, free).
+"""Daily prices for every ticker in the company database, plus the safe-haven and
+benchmark ETFs from configs/universe.yaml (Yahoo, free).
 
 Yahoo's OHLC is adjusted for splits that happened LATER, which leaks the
 future into price levels (a stock that reverse-split 1:50 in 2023 shows a
@@ -68,6 +69,10 @@ def build(db_path=DB_PATH, start="2000-01-01", limit=None, only_missing=True, sy
         symbols = con.execute("SELECT DISTINCT upper(ticker) t FROM tickers "
                               "WHERE ticker IS NOT NULL AND ticker <> '' ORDER BY 1").df()["t"].tolist()
         con.close()
+        # plus the safe-haven and benchmark ETFs (configs/universe.yaml): no CIK, so not in `tickers`
+        from ..config import universe_symbols
+        etfs = sorted({t.upper() for g, v in universe_symbols().items() if g in ("haven", "benchmarks") for t in v})
+        symbols = sorted(set(symbols) | set(etfs))
     log = pd.read_csv(LOG_PATH) if LOG_PATH.exists() else pd.DataFrame(
         columns=["symbol", "fetched_at", "status", "n_bars", "first_date", "last_date", "error"])
     if only_missing:

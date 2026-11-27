@@ -99,7 +99,8 @@ def build(zip_path: Path = FACTS_ZIP, db_path: Path = DB_PATH, out_dir: Path = O
     con.execute("SET preserve_insertion_order=false")
     con.execute(f"""
         COPY (
-            SELECT f.*, COALESCE(fl.acceptance, CAST(f.filed + INTERVAL 1 DAY AS TIMESTAMPTZ)) AS knowable_at
+            SELECT f.*, CASE WHEN fl.acceptance IS NULL OR fl.acceptance < CAST(f.filed AS TIMESTAMPTZ) - INTERVAL 4 DAY
+                             THEN CAST(f.filed + INTERVAL 1 DAY AS TIMESTAMPTZ) ELSE fl.acceptance END AS knowable_at
             FROM read_parquet('{raw_dir}/*.parquet') f
             LEFT JOIN (SELECT accession, min(acceptance) AS acceptance FROM filings GROUP BY 1) fl
               USING (accession)
