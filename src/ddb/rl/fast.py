@@ -171,7 +171,9 @@ class FastAllocatorEnv:
     """B parallel episodes. reset() -> obs [B, obs_dim]; step(actions [B, A]) ->
     obs, reward [B], terminated [B], truncated [B], info. Episodes in a batch run in
     lockstep (same length, independent random starts). A row of NaN in actions means
-    'hold' (no rebalance) for that episode."""
+    'keep the current allocation': no trade between assets, but each industry sleeve
+    still refreshes its names (an asset here IS the sleeve). So the full environment's
+    buy-and-hold (frozen stocks, never refreshed) has no exact counterpart here."""
 
     def __init__(self, split: str = "train", n_envs: int = 16, episode_weeks: int | None = -1, seed: int | None = None,
                  allow_test: bool = False, root=None, cfg: dict | None = None):
@@ -253,8 +255,10 @@ class FastAllocatorEnv:
         # costs come out of cash, then cash and positions move for a week
         E0 = self.E.copy()
         cash = self.E - V.sum(1) - cost
-        self.realized += (V * self.INC[t]).sum(1)              # dividends / distributions: taxable income
+        income = V * self.INC[t]
+        self.realized += income.sum(1)                         # dividends / distributions: taxable income ...
         V = V * (1 + self.R[t])
+        self.basis = self.basis + income                       # ... reinvested, so they add to the cost basis
         self.V = V
         E = cash + V.sum(1)
         # taxes: pay last year's net gains in the first week of a new year

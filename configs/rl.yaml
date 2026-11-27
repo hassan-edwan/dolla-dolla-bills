@@ -14,7 +14,9 @@ dataset:
   start: "2015-01-01"                 # observations need ~1 year of history before training starts
   decision: weekly                    # last trading day of each week
   names_per_sleeve: 5                 # each industry sleeve = its top buy candidates, inverse-volatility weighted
-  haven: {gold: [GLD, IAU], tbills: [SGOV, BIL]}   # first symbol with prices on the date
+  # first symbol with prices on the date; the long-established fund first, so the haven
+  # never switches funds (a switch sells everything and realizes gains)
+  haven: {gold: [GLD, IAU], tbills: [BIL, SGOV]}
 
 env:
   initial_cash: 10000

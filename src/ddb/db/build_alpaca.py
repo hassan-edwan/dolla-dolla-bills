@@ -20,6 +20,7 @@ import pandas as pd
 from ..config import DATA_DIR
 from ..data.alpaca import Alpaca
 from .research import norm_name
+from .clean_prices import clean
 from .schema import connect
 
 DB_PATH = DATA_DIR / "ddb.duckdb"
@@ -76,6 +77,7 @@ def build(db_path=DB_PATH, batch: int = 40) -> dict:
             lo = pd.Timestamp(w.first_filing) - pd.Timedelta(days=30)
             hi = pd.Timestamp(w.last_filing) + pd.Timedelta(days=180)
             d = df[(df["symbol"] == w.query_symbol) & (df["date"] >= lo) & (df["date"] <= hi)].copy()
+            d = clean(d)   # placeholders and earlier users of the ticker (ddb.db.clean_prices)
             if d.empty:
                 continue
             d["symbol"] = w.query_symbol

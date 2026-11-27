@@ -34,6 +34,7 @@ import pandas as pd
 from ..config import DATA_DIR
 from ..data.alpaca import Alpaca
 from ..data.http import RateLimitedSession, sec_user_agent
+from .clean_prices import clean
 from .schema import connect
 
 DB_PATH = DATA_DIR / "ddb.duckdb"
@@ -114,7 +115,10 @@ def build(since: str = "2016-01-01", limit: int | None = None, db_path=DB_PATH) 
             rejected.append((r.cik, sym, f"bars end {last.date()}, notice {end.date()}"))
             continue
         d = adj.merge(raw[["date", "close", "volume"]].rename(columns={"close": "close_raw", "volume": "volume_raw"}), on="date")
-        d = d[(d["date"] >= start) & (d["date"] <= stop)]
+        d = clean(d[(d["date"] >= start) & (d["date"] <= stop)].copy())   # ddb.db.clean_prices
+        if d.empty:
+            rejected.append((r.cik, sym, "only placeholder bars"))
+            continue
         d["symbol"], d["cik"], d["adjclose"], d["source"] = sym, int(r.cik), float("nan"), "alpaca"
         d["knowable_at"] = (d["date"] + pd.Timedelta(hours=21)).dt.tz_localize("UTC")
         cols = ["symbol", "date", "open", "high", "low", "close", "adjclose", "volume", "close_raw", "volume_raw",

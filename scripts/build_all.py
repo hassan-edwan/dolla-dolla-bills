@@ -33,6 +33,7 @@ STEPS = [
     ("pit_fix", [PY, "-m", "ddb.db.fix_knowable"], True, True, ""),
     ("alpaca", [PY, "scripts/build_database.py", "--steps", "alpaca"], False, True, "Alpaca key (delisted prices)"),
     ("dead_prices", [PY, "-m", "ddb.db.build_dead_prices"], False, True, "sec.gov + Alpaca key (failed companies)"),
+    ("clean_prices", [PY, "-m", "ddb.db.clean_prices"], True, True, ""),
     ("insiders", [PY, "scripts/build_database.py", "--steps", "insiders"], True, True, "sec.gov"),
     ("addresses", [PY, "-m", "ddb.db.build_addresses"], True, True, "SEC bulk files"),
     ("screens", [PY, "-m", "ddb.db.build_screens"], True, True, ""),

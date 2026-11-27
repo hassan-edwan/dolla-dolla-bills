@@ -289,11 +289,13 @@ class Backtester:
                     exits.append({"date": d, "symbol": sym, "shares": qty, "exit_price": px,
                                   "last_close": last_close, "kind": kind})
 
-            # Dividends (ex-date d).
+            # Dividends (ex-date d): cash, and taxable income (at the short-term rate: T-bill and
+            # bond ETF distributions are ordinary income; treating stock dividends the same is conservative).
             for sym, qty in acct.positions().items():
                 dv = self.data.dividends.at[d, sym]
                 if dv:
                     acct.deposit(dv * qty)
+                    acct.realized.append({"date": d, "symbol": sym, "gain": dv * qty, "term": "short", "kind": "dividend"})
 
             pos = acct.positions()
             mv = {s: q * float(self.mark.at[d, s]) for s, q in pos.items()}

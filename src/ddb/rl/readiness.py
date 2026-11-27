@@ -202,6 +202,20 @@ def run(db_path=DB_PATH) -> dict:
     except Exception as exc:  # noqa: BLE001
         checks.append(_check("clean prices", False, f"could not check: {exc}", "build prices"))
 
+    # 8b. reused tickers in name-matched series (ddb.db.clean_prices)
+    try:
+        z = con.execute("""
+            WITH a AS (SELECT symbol, cik, date, coalesce(volume_raw, volume) AS v FROM prices WHERE source = 'alpaca'),
+                 g AS (SELECT symbol, cik, date - lag(date) OVER (PARTITION BY symbol, cik ORDER BY date) AS gap FROM a WHERE v > 0)
+            SELECT (SELECT count(*) FROM a WHERE v = 0 OR v IS NULL),
+                   (SELECT count(DISTINCT symbol || cik) FROM g WHERE gap > 45)""").fetchone()
+        stats["alpaca_series"] = {"placeholder_bars": z[0], "series_with_gaps": z[1]}
+        checks.append(_check("no reused-ticker splices", z[0] == 0 and z[1] == 0,
+                             f"Alpaca series: {z[0]:,} zero-volume placeholder bars, {z[1]:,} series with a gap over 45 days",
+                             "python -m ddb.db.clean_prices"))
+    except Exception as exc:  # noqa: BLE001
+        checks.append(_check("no reused-ticker splices", False, f"could not check: {exc}", "python -m ddb.db.clean_prices"))
+
     # 9. freshness
     try:
         from ..live.tracking import freshness
