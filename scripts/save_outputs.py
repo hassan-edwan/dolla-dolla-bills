@@ -25,7 +25,7 @@ DB = ROOT / "data" / "db"
 WT = ROOT / "data" / "_data_branch"
 BRANCH = "data"
 INCLUDE = ["rl", "signals", "regime", "portfolio", "live/tracking.json", "live/execution.json",
-           "store/month", "store/events", "store/ids.npy", "store/meta.json"]   # store/daily (~700 MB) is rebuilt
+           "store/month", "store/events", "store/ids.npy", "store/meta.json", "spreads"]   # store/daily (~700 MB) is rebuilt
 EXCLUDE_SUFFIX = (".log",)
 MAX_BYTES = 95 * 1024 * 1024
 
