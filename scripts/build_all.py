@@ -43,6 +43,9 @@ STEPS = [
     ("attention", [PY, "-m", "ddb.news.attention"], False, False, "Wikimedia"),
     ("research_velocity", [PY, "-m", "ddb.news.research_velocity"], False, False, "arXiv"),
     ("inst_holdings", [PY, "-m", "ddb.db.build_13f", "--since", "2015"], False, False, "sec.gov 13F data sets"),
+    # register tables that loaders added as Parquet folders (read-only connections don't)
+    ("views", [PY, "-c", "from ddb.db.schema import connect; from ddb.config import DATA_DIR; "
+                          "connect(DATA_DIR / 'ddb.duckdb').close(); print('views refreshed')"], True, True, ""),
     ("panel", [PY, "-m", "ddb.features.panel"], True, True, ""),
     ("validate", [PY, "-m", "ddb.features.validate"], True, True, ""),
     ("daily", [PY, "-m", "ddb.features.daily"], True, True, ""),
