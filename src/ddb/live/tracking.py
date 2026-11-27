@@ -208,7 +208,7 @@ def track(con, cfg: dict) -> dict:
 
 def build(db_path=DB_PATH) -> dict:
     cfg = load("risk")
-    con = connect(db_path)
+    con = connect(db_path, read_only=True)
     written = log_forecasts(con)
     out = track(con, cfg["tracking"])
     out["decay"] = decay(cfg["tracking"])

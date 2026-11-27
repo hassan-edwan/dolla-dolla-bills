@@ -258,7 +258,7 @@ def run(policy_name: str = "regime_rule", split: str = "validation", every: int 
     out.mkdir(parents=True, exist_ok=True)
     rules = RuleReviewer()
     lr = LLMReviewer() if llm else None
-    con = connect(DATA_DIR / "ddb.duckdb")
+    con = connect(DATA_DIR / "ddb.duckdb", read_only=True)
     log = DecisionLog(con)
     run_id = log.new_run(f"allocator:{policy_name}", {"split": split}, "baseline policy with attribution reports")
     obs, info = env.reset()

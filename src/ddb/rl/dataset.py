@@ -70,7 +70,7 @@ def build(db_path=DB_PATH) -> dict:
     t0 = time.time()
     cfg = load("rl")
     dcfg = cfg["dataset"]
-    con = connect(db_path)
+    con = connect(db_path, read_only=True)
     sig = Q.signals_overview(con)
     months = [m for m in (sig.get("months") or []) if m >= str(pd.Timestamp(dcfg["start"]) - pd.Timedelta(days=40))[:10]]
     print(f"sleeves for {len(months)} month-ends ...", flush=True)

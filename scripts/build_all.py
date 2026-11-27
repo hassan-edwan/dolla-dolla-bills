@@ -118,6 +118,8 @@ def main():
     ready = ROOT / "data" / "db" / "rl" / "readiness.md"
     if ready.exists() and any(r[0] == "readiness" for r in results):
         print("\n" + ready.read_text().splitlines()[0])
+    if any(not ok and req for _, ok, req, _, _ in results):
+        sys.exit(1)
 
 
 if __name__ == "__main__":

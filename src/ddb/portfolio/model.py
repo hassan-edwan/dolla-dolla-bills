@@ -74,7 +74,7 @@ def build(db_path=DB_PATH) -> dict:
     cfg = load("risk")["portfolio"]
     sim_cfg = load("sim")
     st_rate = sim_cfg["account"].get("short_term_tax_rate", 0.32)
-    con = connect(db_path)
+    con = connect(db_path, read_only=True)
     sig = Q.signals_overview(con)
     months = [m for m in (sig.get("months") or []) if m >= cfg["start"]]
     reg = pd.read_parquet(REGIME).set_index("d") if REGIME.exists() else pd.DataFrame()
