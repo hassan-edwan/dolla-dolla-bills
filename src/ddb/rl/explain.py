@@ -195,12 +195,14 @@ class Explainer:
 
 
 # ------------------------------------------------------------------ baseline policies on observations
-def obs_policy(name: str, meta: dict):
+def obs_policy(name: str, meta: dict, mean=None, std=None):
     """Baselines as functions of the observation vector (for attribution); they read
-    features back in raw units via the train-period mean / std."""
+    features back in raw units with the decision date's standardization (mean / std of
+    earlier dates: env.obs_mean / env.obs_std at that date)."""
     feats, assets, inds = meta["features"], meta["assets"], meta["industries"]
-    mean = np.array([meta["mean"].get(f, 0.0) for f in feats])
-    std = np.array([meta["std"].get(f, 1.0) or 1.0 for f in feats])
+    mean = np.nan_to_num(np.asarray(mean if mean is not None else [meta["mean"].get(f, 0.0) for f in feats], float))
+    std = np.asarray(std if std is not None else [meta["std"].get(f, 1.0) or 1.0 for f in feats], float)
+    std = np.where(np.isfinite(std) & (std > 0), std, 1.0)
     F, A = len(feats), len(assets)
     col = {f: j for j, f in enumerate(feats)}
     eq = np.array([1 / len(inds) if a in inds else 0.0 for a in assets])
@@ -247,7 +249,9 @@ def run(policy_name: str = "regime_rule", split: str = "validation", every: int 
     from .review import LLMReviewer, RuleReviewer
     env = AllocatorEnv(split=split, episode_weeks=None)
     meta = env.meta
-    pol = obs_policy(policy_name, meta)
+    def pol_at(d):
+        dd = env.obs_mean.index[env.obs_mean.index <= d][-1]
+        return obs_policy(policy_name, meta, env.obs_mean.loc[dd].to_numpy(), env.obs_std.loc[dd].to_numpy())
     ex = Explainer(meta["features"], meta["assets"], meta["industries"])
     raw = env.obs
     out = OUT / f"{policy_name}_{split}"
@@ -263,6 +267,7 @@ def run(policy_name: str = "regime_rule", split: str = "validation", every: int 
     done = False
     while not done:
         d = env._d
+        pol = pol_at(d)
         if k % every == 0:
             action, attr = ex.attribute(pol, obs)
             empty = np.array([a in env.industries and env._sleeve(a, d).empty for a in env.assets])

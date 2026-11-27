@@ -96,6 +96,18 @@ def build(db_path=DB_PATH) -> dict:
                                                          "labels": ["fwd_1m", "fwd_3m"]}))
     np.save(out / "ids.npy", ids)
 
+    # point-in-time scaling: each month's cross-sectional median / IQR (liquid universe),
+    # averaged over EARLIER months only (expanding, shifted one month)
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        Xl = np.where(liquid[:, :, None], X, np.nan)
+        med_t = np.nanmedian(Xl, axis=1)
+        iqr_t = np.nanpercentile(Xl, 75, axis=1) - np.nanpercentile(Xl, 25, axis=1)
+    pit_med = pd.DataFrame(med_t).expanding(min_periods=6).mean().shift(1).to_numpy(np.float32)
+    pit_iqr = pd.DataFrame(iqr_t).expanding(min_periods=6).mean().shift(1).to_numpy(np.float32)
+    np.save(out / "month" / "pit_median.npy", pit_med)
+    np.save(out / "month" / "pit_iqr.npy", np.where(pit_iqr > 0, pit_iqr, np.nan).astype(np.float32))
     tr0, tr1 = periods()["train"]
     train_m = (months >= tr0) & (months <= tr1)
     scaling = {"month": _scaling(X[train_m], liquid[train_m])}

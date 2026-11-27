@@ -242,13 +242,9 @@ def build(db_path=DB_PATH) -> dict:
     mask = sl(mask)
     fwd = {hn: sl(B.forward_daily(o, c, hv)) for hn, hv in cfg["horizons"].items()}
     from ..db.build_spreads import align, load_measured
-    tick = {}
-    if len(cols):
-        con2 = connect(db_path, read_only=True)
-        t = con2.execute("SELECT cik, upper(current_tickers[1]) AS s FROM companies WHERE len(current_tickers) > 0").df()
-        con2.close()
-        tick = dict(zip(t["s"], t["cik"]))
-    measured = align(load_measured(tick), cal, cols)
+    lm = load_measured(key="cik")                   # measured by company (cik), usable from the next month
+    lm.columns = [int(c) if str(c).isdigit() else c for c in lm.columns]
+    measured = align(lm, cal, cols)
     cost = B.round_trip_cost(sl(dv20), sim["spread_tiers"], sim.get("open_spread_multiplier", 1.5), True, measured)
     signed = {s: (sl(feats[s]) * sc["sign"]).where(mask) for s, sc in sigs.items()}
 

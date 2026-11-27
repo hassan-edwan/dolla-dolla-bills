@@ -10,7 +10,8 @@
     d = st.day                                     # daily data points, same layout (+ d.cost)
     st.events.batch_before(ciks, t, k=32)          # each company's last 32 events public by t
     idx = st.split_index("month", "train", horizon_days=31)   # rows inside the split, purged
-    Xn = st.normalize("month", m.X[idx])           # train-period robust scaling
+    Xn = st.normalize_pit(idx, m.X[idx])           # scaled with earlier months only (point in time)
+    m.R                                            # cross-sectional percentiles: point in time by construction
 
 Point in time: row t holds only information public by that date's close; labels
 (y) are future returns and must never be used as inputs. Splits come from
@@ -55,7 +56,8 @@ class Store:
     @property
     def month(self) -> SimpleNamespace:
         if self._month is None:
-            self._month = _load_block(self.root / "month", ["X", "R", "y", "liquid", "tradable", "industry", "dates"])
+            self._month = _load_block(self.root / "month", ["X", "R", "y", "liquid", "tradable", "industry", "dates",
+                                                            "pit_median", "pit_iqr"])
         return self._month
 
     @property
@@ -80,8 +82,21 @@ class Store:
         ok = (dates >= a) & (dates + pd.Timedelta(days=horizon_days) <= b)
         return np.where(ok)[0]
 
+    def normalize_pit(self, t: np.ndarray | int, X: np.ndarray) -> np.ndarray:
+        """Point-in-time robust scaling of monthly X at month index t (scalar or one per
+        row of X): each month uses the median / IQR of EARLIER months only. Clipped to +-5;
+        NaN where fewer than 6 earlier months exist. Prefer this (or R) for anything that
+        must match what was knowable at the time."""
+        med = np.asarray(self.month.pit_median)[t]
+        iqr = np.asarray(self.month.pit_iqr)[t]
+        if np.ndim(t):                           # one month index per row of X: broadcast over companies
+            med, iqr = med[:, None, :], iqr[:, None, :]
+        return np.clip((np.asarray(X, np.float32) - med) / iqr, -5, 5)
+
     def normalize(self, freq: str, X: np.ndarray) -> np.ndarray:
-        """Robust scaling with train-period median / IQR per feature, clipped to +-5."""
+        """Robust scaling with train-period median / IQR per feature, clipped to +-5.
+        Note: a training-period sample scaled this way uses statistics from later in
+        the training period; use normalize_pit (or R) where that matters."""
         s = self.meta["scaling"][freq]
         med, iqr = np.asarray(s["median"], np.float32), np.asarray(s["iqr"], np.float32)
         return np.clip((np.asarray(X, np.float32) - med) / iqr, -5, 5)

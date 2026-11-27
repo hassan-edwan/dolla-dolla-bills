@@ -61,15 +61,32 @@ def load_prices(con) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     return piv("close"), piv("close_raw"), piv("volume_raw")
 
 
+# Industry-tag methods to leave out (e.g. ("research",)): configs/signals.yaml exclude_tag_methods.
+def _exclude_methods() -> tuple:
+    try:
+        import yaml
+
+        from ..config import CONFIG_DIR
+        return tuple(yaml.safe_load((CONFIG_DIR / "signals.yaml").read_text()).get("exclude_tag_methods") or ())
+    except Exception:  # noqa: BLE001
+        return ()
+
+
+EXCLUDE_METHODS: tuple | None = None          # None = from config; set a tuple to override
+
+
 def universe_by_month(con, months: list[pd.Timestamp]) -> pd.DataFrame:
+    methods = _exclude_methods() if EXCLUDE_METHODS is None else EXCLUDE_METHODS
+    excl = ",".join(f"'{m}'" for m in methods) or "''"
     m = pd.DataFrame({"d": [x.date() for x in months]})
     con.register("mgrid", m)
-    df = con.execute("""
+    df = con.execute(f"""
         WITH fm AS (SELECT DISTINCT cik, CAST(date_trunc('month', filing_date) AS DATE) AS m FROM filings),
         tagged AS (
             SELECT g.d, ci.cik, arg_min(ci.industry, CASE ci.method WHEN 'research' THEN 0 WHEN 'sic' THEN 1 ELSE 2 END) AS industry
             FROM mgrid g JOIN company_industries ci
               ON ci.valid_from <= g.d AND (ci.valid_to IS NULL OR ci.valid_to > g.d) AND ci.confidence <> 'low'
+             AND ci.method NOT IN ({excl})
             GROUP BY 1, 2
         )
         SELECT t.* FROM tagged t
@@ -85,16 +102,55 @@ def first_versions(con, concepts: list[str], annual: bool) -> pd.DataFrame:
     dur = "AND datediff('day', period_start, period_end) BETWEEN 350 AND 380" if annual else "AND period_start IS NULL"
     q = ",".join(f"'{c}'" for c in concepts)
     return con.execute(f"""
-        SELECT cik, concept, period_end, arg_min(value, knowable_at) AS value, min(knowable_at) AS known
+        SELECT cik, concept, period_end, arg_min(value, (knowable_at, value)) AS value, min(knowable_at) AS known
         FROM fundamentals
         WHERE concept IN ({q}) AND unit IN ('USD', 'shares', 'USD/shares') {dur} AND value IS NOT NULL
         GROUP BY 1, 2, 3
     """).df()
 
 
+def prefer(frames: list[pd.DataFrame], key: list[str], latest_period: bool = False) -> pd.DataFrame:
+    """One fact per key: the earliest known; ties (same filing) go to the latest period
+    if latest_period, then to the earlier frame in `frames` (order of preference).
+    Deterministic, and a fact published later can never displace one known earlier."""
+    df = pd.concat([f.assign(_pref=i) for i, f in enumerate(frames)], ignore_index=True)
+    by, asc = ["known"], [True]
+    if latest_period and "period_end" in df:
+        by, asc = by + ["period_end"], asc + [False]
+    df = df.sort_values(by + ["_pref"], ascending=asc + [True], kind="stable")
+    return df.drop_duplicates(key).drop(columns="_pref")
+
+
+def ticker_cik(con) -> pd.DataFrame:
+    """(ticker, month, cik): which company traded under each ticker in each month, from the
+    cleaned price data itself, so a symbol reused by another company is never attributed
+    to the wrong one."""
+    return con.execute("""
+        WITH prim AS (SELECT cik, upper(current_tickers[1]) AS sym FROM companies WHERE len(current_tickers) > 0)
+        SELECT DISTINCT upper(p.symbol) AS ticker, CAST(date_trunc('month', p.date) AS DATE) AS m,
+               coalesce(p.cik, prim.cik) AS cik
+        FROM prices p LEFT JOIN prim ON upper(p.symbol) = prim.sym
+        WHERE coalesce(p.cik, prim.cik) IS NOT NULL AND p.date >= DATE '2009-06-01'""").df()
+
+
+def attach_cik(rows: pd.DataFrame, tm: pd.DataFrame, date_col: str) -> pd.DataFrame:
+    """rows (ticker, date_col, ...) -> with cik, matched on the ticker's company in that
+    month or the month before."""
+    r = rows.copy()
+    m0 = pd.to_datetime(r[date_col]).dt.tz_localize(None).dt.to_period("M")
+    tm = tm.assign(m=pd.to_datetime(tm["m"]).dt.to_period("M"))
+    out = []
+    for lag in (0, 1):
+        x = r.assign(m=m0 - lag).merge(tm, on=["ticker", "m"], how="inner")
+        out.append(x)
+    x = pd.concat(out).drop(columns="m")
+    return x.drop_duplicates([c for c in x.columns if c != "cik"] + ["cik"])
+
+
 def asof(grid: pd.DataFrame, facts: pd.DataFrame, value_col: str, name: str, max_age_days: int | None = None) -> pd.Series:
     """Latest fact known by each grid time (grid has cik, t)."""
-    f = facts.dropna(subset=[value_col]).sort_values("known")
+    f = facts.dropna(subset=[value_col])
+    f = f.sort_values(["known", "period_end"] if "period_end" in f else ["known"], kind="stable")
     g = grid[["cik", "t"]].reset_index().sort_values("t")
     m = pd.merge_asof(g, f[["cik", "known", value_col] + (["period_end"] if "period_end" in f else [])],
                       left_on="t", right_on="known", by="cik", direction="backward")
@@ -196,7 +252,9 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
             months.append(d[-1])
     print(f"universe over {len(months)} months ...", flush=True)
     uni = universe_by_month(con, months)
+    first_px = close.apply(lambda s: s.first_valid_index())
     uni = uni[uni["cik"].isin(close.columns)]
+    uni = uni[uni["cik"].map(first_px) <= uni["d"]]          # only companies already trading at d
     uni["t"] = (uni["d"] + pd.Timedelta(hours=21, minutes=30)).dt.tz_localize("UTC")
     grid = uni.reset_index(drop=True)
 
@@ -272,22 +330,21 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     grid["assets"] = asof(grid, pick(inst, "Assets"), "value", "assets", 550)
     grid["equity"] = asof(grid, pick(inst, "StockholdersEquity"), "value", "equity", 550)
     grid["cash"] = asof(grid, pick(inst, "CashAndCashEquivalentsAtCarryingValue"), "value", "cash", 550)
-    sh = pd.concat([pick(inst, "EntityCommonStockSharesOutstanding"), pick(inst, "CommonStockSharesOutstanding")])
-    sh = sh.sort_values("known").drop_duplicates(["cik", "known"])
+    sh = prefer([pick(inst, "EntityCommonStockSharesOutstanding"), pick(inst, "CommonStockSharesOutstanding")],
+                ["cik", "known"], latest_period=True)
     grid["shares"] = asof(grid, sh, "value", "shares", 400)
     grid12 = grid[["cik", "t"]].copy()
     grid12["t"] = grid12["t"] - pd.Timedelta(days=365)
     grid["shares_12m_ago"] = asof(grid12, sh, "value", "s12", 400)
     grid["assets_12m_ago"] = asof(grid12, pick(inst, "Assets"), "value", "a12", 550)
-    rev = pd.concat([pick(ann, c) for c in REVENUE])   # in order of preference: first per period wins
-    rev = rev.sort_values("known").drop_duplicates(["cik", "period_end"])
+    rev = prefer([pick(ann, c) for c in REVENUE], ["cik", "period_end"])   # earliest known; ties by preference
     grid["revenue"] = asof(grid, rev, "value", "revenue", 550)
     gp = pick(ann, "GrossProfit")
-    cogs = pd.concat([pick(ann, c) for c in COGS]).drop_duplicates(["cik", "period_end"])
+    cogs = prefer([pick(ann, c) for c in COGS], ["cik", "period_end"])
     gp2 = rev.merge(cogs[["cik", "period_end", "value", "known"]], on=["cik", "period_end"], suffixes=("_r", "_c"))
     gp2 = pd.DataFrame({"cik": gp2["cik"], "period_end": gp2["period_end"], "value": gp2["value_r"] - gp2["value_c"],
                         "known": gp2[["known_r", "known_c"]].max(axis=1)})
-    gp_all = pd.concat([gp, gp2]).sort_values("known").drop_duplicates(["cik", "period_end"])
+    gp_all = prefer([gp, gp2], ["cik", "period_end"])
     grid["gross_profit"] = asof(grid, gp_all, "value", "gp", 550)
     grid["net_income"] = asof(grid, pick(ann, "NetIncomeLoss"), "value", "ni", 550)
     grid["op_cf"] = asof(grid, pick(ann, "NetCashProvidedByUsedInOperatingActivities"), "value", "ocf", 550)
@@ -310,35 +367,39 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
     print("earnings signals ...", flush=True)
     q = con.execute("""
         SELECT cik, period_end, datediff('day', period_start, period_end) AS dur,
-               arg_min(value, knowable_at) AS eps, min(knowable_at) AS known
+               arg_min(value, (knowable_at, concept <> 'EarningsPerShareDiluted', value)) AS eps, min(knowable_at) AS known
         FROM fundamentals
         WHERE concept IN ('EarningsPerShareDiluted', 'EarningsPerShareBasic') AND unit = 'USD/shares'
           AND datediff('day', period_start, period_end) BETWEEN 75 AND 380
         GROUP BY 1, 2, 3
     """).df()
     q["period_end"] = pd.to_datetime(q["period_end"])
-    qtr = q[q["dur"].between(75, 105)].sort_values("known").drop_duplicates(["cik", "period_end"])
+    qtr = q[q["dur"].between(75, 105)].sort_values(["known", "dur", "eps"], kind="stable").drop_duplicates(["cik", "period_end"])
     fy = q[q["dur"].between(350, 380)]
     ytd9 = q[q["dur"].between(260, 285)]
     q4 = fy.merge(ytd9, on="cik", suffixes=("", "_9"))
     q4 = q4[(q4["period_end"] - q4["period_end_9"]).dt.days.between(80, 100)]
     q4 = pd.DataFrame({"cik": q4["cik"], "period_end": q4["period_end"], "eps": q4["eps"] - q4["eps_9"],
-                       "known": q4["known"]})
-    allq = pd.concat([qtr[["cik", "period_end", "eps", "known"]], q4]).sort_values(["cik", "period_end"]) \
-             .drop_duplicates(["cik", "period_end"])
+                       "known": q4[["known", "known_9"]].max(axis=1)})
+    allq = prefer([qtr[["cik", "period_end", "eps", "known"]], q4], ["cik", "period_end"])
     rows = []
     for cik, g in allq.groupby("cik"):
-        g = g.sort_values("period_end").reset_index(drop=True)
-        pe = g["period_end"].to_numpy()
-        ch = []
+        g = g.sort_values(["known", "period_end"], kind="stable").reset_index(drop=True)
         for i in range(len(g)):
-            prev = np.where(np.abs((pe[i] - pe[:i]).astype("timedelta64[D]").astype(int) - 365) <= 20)[0]
-            if len(prev):
-                c = g.at[i, "eps"] - g.at[prev[-1], "eps"]
-                ch.append(c)
+            # everything this company had published by the time quarter i came out
+            h = g[g["known"] <= g.at[i, "known"]].sort_values("period_end").reset_index(drop=True)
+            if h["period_end"].iloc[-1] != g.at[i, "period_end"]:
+                continue                                    # a late, older quarter: not a new surprise
+            pe = h["period_end"].to_numpy()
+            ch = []
+            for k in range(len(h)):
+                prev = np.where(np.abs((pe[k] - pe[:k]).astype("timedelta64[D]").astype(int) - 365) <= 20)[0]
+                if len(prev):
+                    ch.append(h.at[k, "eps"] - h.at[prev[-1], "eps"])
+            if ch and len(pe) > 1 and np.any(np.abs((pe[-1] - pe[:-1]).astype("timedelta64[D]").astype(int) - 365) <= 20):
                 hist = ch[-9:-1]
                 if len(hist) >= 4 and np.std(hist) > 0:
-                    rows.append((cik, g.at[i, "known"], c / np.std(hist)))
+                    rows.append((cik, g.at[i, "known"], ch[-1] / np.std(hist)))
     sue = pd.DataFrame(rows, columns=["cik", "known", "sue"])
     grid["sue"] = asof(grid, sue, "sue", "sue", 120)
 
@@ -397,10 +458,10 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
 
     # ---- alternative data
     print("alternative data ...", flush=True)
-    tick = con.execute("SELECT DISTINCT upper(ticker) AS ticker, cik FROM tickers WHERE source IN ('sec_current','research')").df()
+    tmap = ticker_cik(con)
     pol = optional(con, "SELECT upper(ticker) AS ticker, transaction_type, knowable_at AS k FROM politician_trades",
-                   ["ticker", "transaction_type", "k"]) \
-        .merge(tick, on="ticker")
+                   ["ticker", "transaction_type", "k"])
+    pol = attach_cik(pol, tmap, "k") if len(pol) else pol.assign(cik=pd.Series(dtype=float))
     pol["signed"] = np.where(pol["transaction_type"] == "buy", 1.0, -1.0)
     grid["congress_net"] = window_sum(grid, pol, "signed", 180, "cn")
     gc = optional(con, "SELECT cik, amount, knowable_at AS k FROM gov_contracts", ["cik", "amount", "k"])
@@ -435,9 +496,11 @@ def build(start: str = "2011-01", db_path=DB_PATH) -> dict:
 
     # ---- short interest (days to cover), if loaded
     try:
-        si = con.execute("""SELECT upper(symbol) AS ticker, days_to_cover, short_interest, knowable_at AS known
-                            FROM read_parquet('data/db/short_interest/*.parquet')""").df().merge(tick, on="ticker")
-        si = si.sort_values("known").drop_duplicates(["cik", "known"])
+        si = con.execute("""SELECT upper(symbol) AS ticker, settlement_date, days_to_cover, short_interest, knowable_at AS known
+                            FROM read_parquet('data/db/short_interest/*.parquet')""").df()
+        si = attach_cik(si, tmap, "settlement_date")
+        # one row per company and date: the share class with the most shares short
+        si = si.sort_values(["known", "short_interest", "ticker"], kind="stable").drop_duplicates(["cik", "known"], keep="last")
         grid["days_to_cover"] = asof(grid, si, "days_to_cover", "dtc", 45)
         grid["short_pct"] = asof(grid, si, "short_interest", "si", 45) / grid["shares"]
     except Exception as exc:  # noqa: BLE001

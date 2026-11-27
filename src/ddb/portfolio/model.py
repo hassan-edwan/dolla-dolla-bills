@@ -149,15 +149,12 @@ def build(db_path=DB_PATH) -> dict:
                      dividends=divs.reindex(columns=names) if len(divs) else pd.DataFrame())
     settings = SimSettings.from_config(sim_cfg)
     from ..db.build_spreads import load_measured
-    con = connect(db_path, read_only=True)
-    t = con.execute("SELECT cik, upper(current_tickers[1]) AS s FROM companies WHERE len(current_tickers) > 0").df()
-    con.close()
     from ..data.failures import ledger_from_outcomes
     con = connect(db_path, read_only=True)
     ledger = ledger_from_outcomes(con, {str(c): int(c) for c in cols})
     con.close()
     costs = CostModel.from_config(sim_cfg["costs"])
-    costs.measured = load_measured({s: str(c) for s, c in zip(t["s"], t["cik"])})
+    costs.measured = load_measured(key="cik")         # columns str(cik), ETFs by symbol
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = Backtester(data, Targets(targets), costs, settings, ledger) \

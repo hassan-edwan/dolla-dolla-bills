@@ -275,6 +275,21 @@ def run(db_path=DB_PATH) -> dict:
                                  "environment): first buy candidate " + ", ".join(f"{k} {v}" for k, v in starts.items()),
                                  "expected for young industries; consider dropping a sleeve that never has candidates",
                                  blocker=False))
+    # time travel: signals rebuilt from a copy of the database truncated at past dates
+    pa = DATA_DIR / "db" / "rl" / "pit_audit.json"
+    if pa.exists():
+        a = json.loads(pa.read_text())
+        bad = [c for c in a["checks"] if not c["identical"]]
+        checks.append(_check("time-travel test", a["passed"] and a.get("reference") == "stored",
+                             f"{len(a['checks'])} past dates rebuilt from only what was public then "
+                             f"({', '.join(c['month'] for c in a['checks'])}) vs the stored signals: "
+                             + ("identical" if not bad else "; ".join(f"{c['month']}: {c['features_differing']}" for c in bad))
+                             + ("" if a.get("reference") == "stored" else " (code check only: rerun with --reference stored)"),
+                             "python -m ddb.rl.pit_audit --reference stored"))
+    else:
+        checks.append(_check("time-travel test", False, "not run", "python -m ddb.rl.pit_audit --reference stored"))
+    stats["identity_screens"] = ("screens use today's addresses, codes and names (no history kept): "
+                                 "about 3% of liquid company-months are excluded on that basis")
     n_test = S.test_accesses()
     checks.append(_check("test period untouched", n_test == 0, f"opened {n_test} times", "pick a new test period after many looks",
                          blocker=False))

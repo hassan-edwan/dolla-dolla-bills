@@ -19,7 +19,7 @@ T-bills and cash, executed by the real backtester.
            - turnover_penalty * sleeve-level turnover.
   Costs and taxes are already inside equity.
 - observation = standardized market/industry/haven features at the decision
-  date's close (train-period statistics), then the current weight of each asset,
+  date's close (each date scaled by the statistics of earlier dates only), then the current weight of each asset,
   the cash share and the drawdown. Missing values are 0 (= the training mean)
   with a mask of which features were missing.
 
@@ -75,8 +75,11 @@ class AllocatorEnv(_Base):
         obs = pd.read_parquet(root / "obs.parquet")
         obs["d"] = pd.to_datetime(obs["d"])
         self.obs = obs.set_index("d")[self.meta["features"]]
-        self.mean = pd.Series(self.meta["mean"]).reindex(self.obs.columns).fillna(0)
-        self.std = pd.Series(self.meta["std"]).reindex(self.obs.columns).replace(0, 1).fillna(1)
+        def per_date(name):
+            f = pd.read_parquet(root / f"{name}.parquet")
+            f["d"] = pd.to_datetime(f["d"])
+            return f.set_index("d").reindex(columns=self.obs.columns)
+        self.obs_mean, self.obs_std = per_date("obs_mean"), per_date("obs_std")   # past data only
         sl = pd.read_parquet(root / "sleeves.parquet")
         sl["month"] = pd.to_datetime(sl["month"])
         self.sleeves = sl
@@ -170,7 +173,8 @@ class AllocatorEnv(_Base):
 
     def _observe(self, d, pf) -> np.ndarray:
         x = self.obs.loc[d] if d in self.obs.index else self.obs.loc[:d].iloc[-1]
-        z = ((x - self.mean) / self.std).to_numpy(dtype=float)
+        dd = d if d in self.obs_mean.index else self.obs_mean.index[self.obs_mean.index <= d][-1]
+        z = ((x - self.obs_mean.loc[dd]) / self.obs_std.loc[dd]).to_numpy(dtype=float)
         miss = np.isnan(z).astype(float)
         z = np.clip(np.nan_to_num(z), -10, 10)
         w = self._asset_weights(pf, d)

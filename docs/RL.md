@@ -26,6 +26,37 @@ The report blocks training until the following hold (thresholds in `readiness`):
 Each failed check comes with the command that fixes it. The Data health page in the
 Model lab shows the same checklist.
 
+## Point in time: what the model sees is what it could have seen
+
+Every input is built as it would have looked at the decision time (the close, 21:30 UTC).
+
+**Time-travel test** (`python -m ddb.rl.pit_audit --reference stored`):
+1. Copy the database keeping only rows public by a past date (each row's `knowable_at`).
+2. Rebuild all monthly signals from that copy.
+3. Check that the past date's signals match the stored ones exactly.
+
+It runs at three dates: 2018-06, 2021-03 and 2024-09. Readiness blocks if any value differs.
+
+The first run found four problems. All are fixed:
+
+| Problem | Effect | Fix |
+|---|---|---|
+| Several revenue or share-count tags in one filing were picked by an unstable sort | values depended on unrelated data; a preferred tag published later could displace one known earlier | earliest known wins, then a fixed preference order (`panel.prefer`) |
+| Earnings-surprise history used every quarter ever reported | a quarter first published later could change an older surprise | each surprise uses only quarters published by then |
+| Short interest matched by today's ticker | data under an old ticker was lost; a reused ticker could match the wrong company | matched to the company trading under that ticker that month (`panel.ticker_cik`) |
+| Rows existed for companies before their first trade | the row itself revealed a future listing | a company enters the panel once it has a price |
+
+**Scaling:**
+- RL observations: expanding mean and standard deviation.
+- Store: `Store.normalize_pit` uses the expanding cross-sectional median and IQR.
+- `Store.normalize` (train-period statistics) is kept for convenience; it is not point in time.
+
+**Trading costs:** the measured bid-ask spread for a company (`ddb.db.build_spreads`, from 2016) is used from the month after it was measured, for at most 100 days. Where there is none, the spread is estimated from trading volume. This applies in the backtester, the daily cost model and the fast environment.
+
+**Known caveats:**
+- **Identity screens:** company addresses, industry codes and names are as of today, with no history kept. They exclude about 3% of liquid company-months.
+- **Research-written industry tags:** these are written today about the past. Strict mode turns them off: set `exclude_tag_methods: [research]` in `configs/signals.yaml`. A test showed it barely matters (composite IC 0.062 → 0.056).
+
 ## Splits (`ddb.rl.splits`)
 
 Default periods:
@@ -60,7 +91,9 @@ industry, plus gold and T-bills; the rest is cash.
 - gold and T-bill trends;
 - the 3-month T-bill yield.
 
-Features are standardized with train-period statistics only.
+Features are standardized point in time: each week uses the mean and standard
+deviation of earlier weeks only (expanding window, at least 26 weeks), so no
+observation is scaled with statistics from its own future.
 
 ## Environment (`ddb.rl.env.AllocatorEnv`)
 

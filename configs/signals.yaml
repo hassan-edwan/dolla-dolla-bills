@@ -4,6 +4,11 @@
 #   family: price | fundamental | event | insider | alternative
 #   prior: what the published evidence says (filled in from the research report)
 #   question: which decision question it answers on the dashboard (see `questions` below)
+# Industry-tag methods to leave out of the universe. Default: none. Strict mode
+# (["research"]) drops the AI-researched tags: a test showed they change little
+# (composite IC 0.062 -> 0.056), but they are written today about the past.
+exclude_tag_methods: []
+
 signals:
   mom_12_1:
     family: price

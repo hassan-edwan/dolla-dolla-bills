@@ -85,7 +85,11 @@ def build(root=None, out=None) -> dict:
     Ov, Cv = O.to_numpy(float), C.to_numpy(float)
     Dv = divs.to_numpy(float)
     dv20 = (C * V).rolling(20, min_periods=5).mean().to_numpy(float)
-    half = _half_spread_bps(np.nan_to_num(dv20), tiers) / 1e4
+    half = _half_spread_bps(np.nan_to_num(dv20), tiers)
+    from ..db.build_spreads import align, load_measured
+    meas = align(load_measured(key="cik"), cal, C.columns).to_numpy(float)   # measured half-spreads where known
+    n_meas = int(np.isfinite(meas).sum())
+    half = np.where(np.isfinite(meas), meas, half) / 1e4
     rt_cost = half * open_mult + half                          # buy at the open, sell later
     ret = C.pct_change(fill_method=None)
     vol63 = (ret.rolling(63, min_periods=20).std() * math.sqrt(252)).to_numpy(float)
@@ -152,9 +156,9 @@ def build(root=None, out=None) -> dict:
             tot = sum(drift.values()) or 1.0
             prev[a] = {n: x / tot for n, x in drift.items()}
             R[i, a_i], INC[i, a_i], COST[i, a_i], AVAIL[i, a_i] = r_a, inc_a, c_a, True
-    mean = pd.Series(meta["mean"]).reindex(obs.columns).fillna(0).to_numpy()
-    std = pd.Series(meta["std"]).reindex(obs.columns).replace(0, 1).fillna(1).to_numpy()
-    Z = (obs.to_numpy(float) - mean) / std
+    rdz = lambda n: pd.read_parquet(root / f"{n}.parquet").assign(d=lambda x: pd.to_datetime(x["d"])).set_index("d") \
+        .reindex(index=obs.index, columns=obs.columns).to_numpy(float)                       # noqa: E731
+    Z = (obs.to_numpy(float) - rdz("obs_mean")) / rdz("obs_std")                          # past data only
     MISS = np.isnan(Z).astype(np.float32)
     Z = np.clip(np.nan_to_num(Z), -10, 10).astype(np.float32)
     out.mkdir(parents=True, exist_ok=True)
@@ -163,7 +167,7 @@ def build(root=None, out=None) -> dict:
     np.save(out / "dates.npy", dates.to_numpy().astype("datetime64[D]"))
     (out / "meta.json").write_text(json.dumps({"assets": assets, "features": list(obs.columns), "weeks": int(W),
                                                "built": pd.Timestamp.now(tz="UTC").isoformat()}))
-    return {"weeks": W, "assets": A, "seconds": round(time.time() - t0)}
+    return {"weeks": W, "assets": A, "measured_spread_cells": n_meas, "seconds": round(time.time() - t0)}
 
 
 # ------------------------------------------------------------------ env

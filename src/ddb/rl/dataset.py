@@ -18,7 +18,8 @@ Observation at each decision date (all public by that day's close):
   candidates and their average composite percentile; median composite of all
   screened names;
 - per haven asset: 4 / 12-week return and trend; the 3-month T-bill yield.
-Features are standardized with mean / std from the TRAIN period only.
+Features are standardized point in time: each date with the mean / std of the dates
+before it (obs_mean / obs_std), so no observation reflects statistics from its future.
 
 Outputs, under data/db/rl/: obs.parquet, sleeves.parquet, prices_<field>.parquet,
 meta.json.
@@ -156,11 +157,19 @@ def build(db_path=DB_PATH) -> dict:
     obs = obs.astype(float)
     tr0, tr1 = periods()["train"]
     train = obs[(obs.index >= tr0) & (obs.index <= tr1)]
-    mean, std = train.mean(), train.std().replace(0, 1).fillna(1)
+    mean, std = train.mean(), train.std().replace(0, 1).fillna(1)   # reference only
+    # Point in time: each date is standardized with the mean / std of the dates BEFORE it
+    # (expanding, at least 26 weeks), never with statistics that include later data.
+    exp_mean = obs.expanding(min_periods=26).mean().shift(1)
+    exp_std = obs.expanding(min_periods=26).std().shift(1)
+    exp_std = exp_std.where(exp_std > 1e-12)
 
     OUT.mkdir(parents=True, exist_ok=True)
     obs.index.name = "d"
     obs.reset_index().to_parquet(OUT / "obs.parquet", index=False)
+    for name, fr in (("obs_mean", exp_mean), ("obs_std", exp_std)):
+        fr.index.name = "d"
+        fr.reset_index().to_parquet(OUT / f"{name}.parquet", index=False)
     sleeves.to_parquet(OUT / "sleeves.parquet", index=False)
     ciks = sorted(sleeves["cik"].unique()) if len(sleeves) else []
     for f in ("open", "high", "low", "close", "volume"):
