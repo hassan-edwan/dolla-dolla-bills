@@ -407,7 +407,10 @@ def eval_full(policy, params: np.ndarray, split: str, lo=None, hi=None, band: fl
         tw = policy(obs[None], np.asarray(params)[None], sh, state)[0]
         cur = obs[2 * F:2 * F + fast.n_assets]
         move = 0.5 * (np.abs(tw - cur).sum() + abs(tw.sum() - cur.sum()))
-        act = None if (not first and move < band) else tw
+        # inside the band: keep the sleeve weights (no trade between assets), but each
+        # sleeve still refreshes its names, exactly as the fast env does; None would also
+        # freeze the names (buy-and-hold), which is a different policy
+        act = cur.copy() if (not first and move < band) else tw
         first = False
         obs, _, done, _, info = env.step(act)
     eq = env.equity_curve()
