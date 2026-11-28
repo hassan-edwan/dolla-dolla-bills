@@ -457,9 +457,6 @@ def main():
     print(f"{time.time() - t0:.0f}s")
 
 
-if __name__ == "__main__":
-    main()
-
 
 # ------------------------------------------------------------------ variants + full-backtester fold scores
 ES_VARIANTS = {
@@ -512,3 +509,7 @@ def full_folds(variants=("es_v1", "es_v2"), log=print) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     df.to_json(OUT / "full_folds.json", orient="records", indent=1)
     return df
+
+
+if __name__ == "__main__":
+    main()
