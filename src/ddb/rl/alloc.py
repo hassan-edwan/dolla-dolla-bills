@@ -332,6 +332,51 @@ def eval_window(policy, params: np.ndarray, split: str, lo, hi, band=0.0, state_
     return r
 
 
+class _Shim:
+    """What a vectorized policy reads from the fast env, for one full-env decision date."""
+    def __init__(self, fast: FastAllocatorEnv, d):
+        self.Z, self.R, self.AVAIL, self.assets, self.n_assets = fast.Z, fast.R, fast.AVAIL, fast.assets, fast.n_assets
+        self.t = np.array([min(int(np.searchsorted(fast.dates, d, side="right")) - 1, len(fast.R) - 1)])
+
+
+def eval_full(policy, params: np.ndarray, split: str, lo=None, hi=None, band: float = 0.0, state_init=None,
+              allow_test: bool = False) -> dict:
+    """The same policy in the full backtester (share-level lots, wash sales, measured
+    spreads, impact, T+1). One parameter vector."""
+    from ..metrics import summary
+    from .env import AllocatorEnv
+    fast = FastAllocatorEnv(split=split, n_envs=1, episode_weeks=None, allow_test=allow_test)
+    env = AllocatorEnv(split=split, episode_weeks=None, allow_test=allow_test)
+    if lo is not None or hi is not None:
+        keep = np.ones(len(env.dates), bool)
+        if lo is not None:
+            keep &= env.dates >= pd.Timestamp(lo)
+        if hi is not None:
+            keep &= env.dates <= pd.Timestamp(hi)
+        env.dates = env.dates[keep]
+    state = dict(state_init or {})
+    obs, info = env.reset()
+    first = True
+    done = False
+    F = fast.Z.shape[1]
+    while not done:
+        sh = _Shim(fast, env._d)
+        tw = policy(obs[None], np.asarray(params)[None], sh, state)[0]
+        cur = obs[2 * F:2 * F + fast.n_assets]
+        move = 0.5 * (np.abs(tw - cur).sum() + abs(tw.sum() - cur.sum()))
+        act = None if (not first and move < band) else tw
+        first = False
+        obs, _, done, _, info = env.step(act)
+    eq = env.equity_curve()
+    res = getattr(env, "result", None)
+    out = {k: float(v) for k, v in summary(eq).items() if isinstance(v, (int, float, np.floating))}
+    out["log_growth"] = float(np.log(eq.iloc[-1] / eq.iloc[0]))
+    if res is not None:
+        out["taxes_paid"] = (float(res.taxes_paid.sum()) + getattr(env, "tax_due_end", 0.0)) / float(eq.iloc[0])
+        out["trades"] = int(len(res.trades))
+    return out
+
+
 def folds() -> list[tuple[str, str, str, str]]:
     return [("2016-01-01", f"{y - 1}-12-31", f"{y}-01-01", f"{y}-12-31") for y in FOLD_YEARS]
 
@@ -394,11 +439,17 @@ def _tune(policy, grid, lo, hi, state_init=None, windows: int = 32, weeks: int =
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["folds"])
+    ap.add_argument("what", choices=["folds", "full_folds"])
     ap.add_argument("--iters", type=int, default=150)
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
+    if a.what == "full_folds":
+        df = full_folds()
+        print("\nmean over folds (full backtester):\n",
+              df.groupby("policy")[["log_growth", "max_dd", "tax", "trades"]].mean().to_string(float_format=lambda v: f"{v:+.4f}"))
+        print(f"{time.time() - t0:.0f}s")
+        return
     df = run_folds(a.iters)
     df.to_json(OUT / "folds.json", orient="records", indent=1, default_handler=str)
     summ = df.groupby("policy")[["cagr", "log_growth", "tax", "cost", "turnover"]].mean()
@@ -408,3 +459,56 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ------------------------------------------------------------------ variants + full-backtester fold scores
+ES_VARIANTS = {
+    "es_v1": dict(band=0.05, weeks=52, decay=0.005),
+    "es_v2": dict(band=0.10, weeks=104, decay=0.02),
+}
+
+
+def train_variant(name: str, seeds=(0, 1, 2), iters: int = 150, log=print) -> dict:
+    """Train an ES variant on every fold's fitting years; the policy for a fold is the
+    average of the seeds' parameters (a linear scorer, so averaging is an ensemble of sorts)."""
+    kw = ES_VARIANTS[name]
+    out = {}
+    for flo, fhi, elo, ehi in folds():
+        ths = []
+        for s in seeds:
+            f = OUT / f"{name}_fold{elo[:4]}_seed{s}.npy"
+            if name == "es_v1" and (OUT / f"es_fold{elo[:4]}_seed{s}.npy").exists():
+                th = np.load(OUT / f"es_fold{elo[:4]}_seed{s}.npy")
+            elif f.exists():
+                th = np.load(f)
+            else:
+                log(f"  {name} fold {elo[:4]} seed {s}")
+                th = train_es(flo, fhi, iters=iters, seed=s, log=log, **kw)
+            np.save(f, th)
+            ths.append(th)
+        out[elo[:4]] = np.mean(ths, 0)
+    return out
+
+
+def full_folds(variants=("es_v1", "es_v2"), log=print) -> pd.DataFrame:
+    """Every policy on every fold year, scored in the full backtester."""
+    rows = []
+    th = {v: train_variant(v, log=log) for v in variants}
+    env = make_env("train", 1)
+    for flo, fhi, elo, ehi in folds():
+        y = elo[:4]
+        res = {"equal_industries": eval_full(p_equal, np.zeros(1), "train", elo, ehi)}
+        best = _tune(p_vol_scaled, VOL_GRID, flo, fhi)
+        res["vol_scaled"] = eval_full(p_vol_scaled, best["params"], "train", elo, ehi, best["band"])
+        fc = fit_forecaster(env, flo, fhi)
+        best = _tune(p_predict_optimize, PO_GRID, flo, fhi, state_init={"fc": fc}, windows=12)
+        res["predict_optimize"] = eval_full(p_predict_optimize, best["params"], "train", elo, ehi, best["band"], {"fc": fc})
+        for v in variants:
+            res[v] = eval_full(p_scorer, th[v][y], "train", elo, ehi, ES_VARIANTS[v]["band"])
+        for k, r in res.items():
+            rows.append({"fold": y, "policy": k, "log_growth": r["log_growth"], "max_dd": r.get("max_drawdown"),
+                         "tax": r.get("taxes_paid"), "trades": r.get("trades")})
+        log(pd.DataFrame([x for x in rows if x["fold"] == y]).to_string(index=False, float_format=lambda v: f"{v:+.4f}"))
+    df = pd.DataFrame(rows)
+    df.to_json(OUT / "full_folds.json", orient="records", indent=1)
+    return df
