@@ -217,3 +217,34 @@ in each of two sectors.
 
 The LLM reviewer is not measured yet. Serve the PLAN.md §6 local model, set
 `configs/review.yaml`, then run `evaluate(LLMReviewer(), reports)`.
+
+## Allocator training, first round (`python -m ddb.rl.alloc`)
+
+- **Objective:** after-tax growth, with taxes on.
+- **Training:** the fast environment.
+- **Scoring:** the full backtester.
+- **Model selection:** walk-forward folds inside training (fit 2016…Y−1, test on year Y, for Y = 2019, 2020, 2021).
+- **Validation:** one logged look (`data/db/rl/alloc/validation_looks.log`).
+
+| Policy | Folds: log growth per year | Folds: avg max drawdown | Validation 2022–23: return per year | Validation: max drawdown |
+|---|---|---|---|---|
+| Equal weight (sleeves with names) | 13.5% | −17.5% | **11.2%** | −20.6% |
+| ES tilt around equal weight, 15% band | 14.7% | −17.7% | 3.2% (seeds 1.4–3.9%) | −26.9% |
+| ES free scorer (v2) | 22.1% | −24.0% | −8.8% (seeds −6.8 to −8.1%) | −27.4% |
+| Predict-then-optimize | 10.2% | −15.6% | not taken to validation | |
+| Volatility-scaled equal weight | 8.1% | −12.2% | not taken to validation | |
+
+**Result: nothing learned beats equal weight out of sample.**
+- The free scorer learns all-in sector bets: in 2020 it put 100% into energy.
+- The bounded tilt learned to buy the industries that fell over the last 26 weeks (coefficient −1.8). In 2022 that kept it out of energy, which was the year's winner.
+- Three fold years and 313 training weeks are not enough to learn rotation between 9 industries.
+
+**Lessons now built into the code:**
+- Fold scores must come from the full backtester. The fast and full environments time weeks differently (open-to-open vs close), which adds about ±5 points of noise to a single year, though it averages out over the whole period.
+- "Hold" inside a no-trade band must keep the sleeve weights and still refresh each sleeve's names. Passing no action instead freezes the stocks, which is a different policy (buy-and-hold).
+- A policy needs a hard limit on concentration.
+
+**Next levers:**
+1. More training data for the shared scorer: train it on every industry with listed stocks, not just the 9 tracked ones.
+2. Improve the stock-picking layer.
+3. Tax-aware holding inside each sleeve: refresh less often and wait for long-term rates.
