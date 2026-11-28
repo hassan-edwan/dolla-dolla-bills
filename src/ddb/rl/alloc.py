@@ -427,6 +427,7 @@ def folds() -> list[tuple[str, str, str, str]]:
 VOL_GRID = np.array([[a, c, k] for a in (0.0, 0.25, 0.5, 1.0) for c in (0.0, 0.5, 1.0) for k in (0.0, 0.25, 0.5)])
 PO_GRID = np.array([[g, s] for g in (1.0, 3.0, 10.0, 30.0) for s in (0.0, 0.5, 1.0)])
 BANDS = (0.0, 0.05, 0.10)
+EW_BANDS = (0.10, 0.20)
 
 
 def run_folds(es_iters: int = 150, seeds=(0, 1, 2), log=print) -> pd.DataFrame:
@@ -506,6 +507,7 @@ ES_VARIANTS = {
     "es_v1": dict(band=0.05, weeks=52, decay=0.005),
     "es_v2": dict(band=0.10, weeks=104, decay=0.02),
     "es_tilt": dict(band=0.05, weeks=104, decay=0.02, policy="tilt"),
+    "es_tilt_b15": dict(band=0.15, weeks=104, decay=0.02, policy="tilt"),
 }
 POLICIES = {"scorer": (p_scorer, scorer_init), "tilt": (p_tilt, tilt_init)}
 
@@ -534,7 +536,7 @@ def train_variant(name: str, seeds=(0, 1, 2), iters: int = 150, log=print) -> di
     return out
 
 
-def full_folds(variants=("es_v1", "es_v2", "es_tilt"), log=print) -> pd.DataFrame:
+def full_folds(variants=("es_v1", "es_v2", "es_tilt", "es_tilt_b15"), log=print) -> pd.DataFrame:
     """Every policy on every fold year, scored in the full backtester."""
     rows = []
     th = {v: train_variant(v, log=log) for v in variants}
@@ -542,6 +544,8 @@ def full_folds(variants=("es_v1", "es_v2", "es_tilt"), log=print) -> pd.DataFram
     for flo, fhi, elo, ehi in folds():
         y = elo[:4]
         res = {"equal_industries": eval_full(p_equal, np.zeros(1), "train", elo, ehi)}
+        for b in EW_BANDS:
+            res[f"equal_band{int(b * 100)}"] = eval_full(p_equal, np.zeros(1), "train", elo, ehi, b)
         best = _tune(p_vol_scaled, VOL_GRID, flo, fhi)
         res["vol_scaled"] = eval_full(p_vol_scaled, best["params"], "train", elo, ehi, best["band"])
         fc = fit_forecaster(env, flo, fhi)
