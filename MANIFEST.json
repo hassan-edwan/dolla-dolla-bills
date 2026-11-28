@@ -1,7 +1,231 @@
 {
- "saved_at": "2026-11-27T19:50:18Z",
- "code_commit": "6ec24f4",
+ "saved_at": "2026-11-28T19:21:15Z",
+ "code_commit": "30d40e1",
  "files": [
+  {
+   "path": "rl/alloc/es_fold2019_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2019_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2019_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2020_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2020_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2020_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2021_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2021_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_fold2021_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_all_mean.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_all_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_all_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_all_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2019_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2019_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2019_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2020_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2020_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2020_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2021_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2021_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_b15_fold2021_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2019_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2019_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2019_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2020_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2020_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2020_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2021_seed0.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2021_seed1.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_tilt_fold2021_seed2.npy",
+   "bytes": 432
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2019_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2019_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2019_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2020_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2020_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2020_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2021_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2021_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v1_fold2021_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_all_mean.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_all_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_all_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_all_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2019_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2019_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2019_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2020_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2020_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2020_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2021_seed0.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2021_seed1.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/es_v2_fold2021_seed2.npy",
+   "bytes": 656
+  },
+  {
+   "path": "rl/alloc/folds.json",
+   "bytes": 4169
+  },
+  {
+   "path": "rl/alloc/full_folds.json",
+   "bytes": 3806
+  },
+  {
+   "path": "rl/alloc/validation.json",
+   "bytes": 3506
+  },
   {
    "path": "rl/exits.parquet",
    "bytes": 5074
@@ -900,7 +1124,7 @@
   }
  ],
  "skipped_too_large": [],
- "total_bytes": 454288766,
+ "total_bytes": 454330087,
  "readiness": {
   "ready": true,
   "blockers": 0
