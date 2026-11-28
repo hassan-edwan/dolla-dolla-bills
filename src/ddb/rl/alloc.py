@@ -202,6 +202,47 @@ def scorer_init(L: Layout) -> np.ndarray:
     return p
 
 
+def tilt_dim(L: Layout) -> int:
+    M = len(L.mkt_idx)
+    return len(SLEEVE_FEATS) + 1 + 2 * (M + 1)
+
+
+def tilt_init(L: Layout) -> np.ndarray:
+    p = np.zeros(tilt_dim(L))
+    M = len(L.mkt_idx)
+    p[len(SLEEVE_FEATS) + 1 + M] = -4.0                       # risk-off share starts at ~0
+    return p
+
+
+def p_tilt(obs, params, env, state, kappa: float = 1.0, max_off: float = 0.5):
+    """Bounded tilt around equal weight (the benchmark), params [B, D]:
+      industry a:  EW_a * exp(kappa * tanh(th_tok . tok_a + th_w * w_a)), renormalized
+                   (so no sleeve can exceed ~e^2 times another: built-in diversification)
+      risk-off:    h = max_off * sigmoid(th_h . mkt + b_h) moved to havens,
+                   split gold / T-bills by sigmoid(th_g . mkt + b_g)
+    Same scorer for every industry; zero parameters except b_h = -4 is equal weight."""
+    L = state.setdefault("L", layout(env))
+    tok, miss, mkt, w, cash = L.split_obs(obs)
+    B, A, K = tok.shape
+    M = mkt.shape[1]
+    th_tok, th_w = params[:, :K], params[:, K]
+    o = K + 1
+    th_h, b_h = params[:, o:o + M], params[:, o + M]
+    o += M + 1
+    th_g, b_g = params[:, o:o + M], params[:, o + M]
+    ind = (L.types == 0)[None, :] & (env.AVAIL[env.t] > 0)
+    s = kappa * np.tanh(np.einsum("bak,bk->ba", tok, th_tok) + w * th_w[:, None])
+    wi = np.where(ind, np.exp(s), 0.0)
+    wi = wi / np.maximum(wi.sum(1, keepdims=True), 1e-12)
+    sig = lambda x: 1 / (1 + np.exp(-x))   # noqa: E731
+    h = max_off * sig((th_h * mkt).sum(1) + b_h)
+    g = sig((th_g * mkt).sum(1) + b_g)
+    out = wi * (1 - h)[:, None]
+    out[:, L.assets.index("gold")] += h * g
+    out[:, L.assets.index("tbills")] += h * (1 - g)
+    return out
+
+
 # ------------------------------------------------------------------ predict, then optimize
 def fit_forecaster(env: FastAllocatorEnv, lo, hi, horizon: int = 4, ridge: float = 10.0) -> dict:
     """Pooled ridge: next `horizon` weeks of log return in excess of T-bills, per asset,
@@ -289,14 +330,16 @@ def _project(x):
 
 # ------------------------------------------------------------------ evolution strategies
 def train_es(lo, hi, iters: int = 150, pop: int = 48, windows: int = 24, weeks: int = 52, sigma: float = 0.1,
-             lr: float = 0.03, decay: float = 0.005, band: float = 0.05, seed: int = 0, log=None) -> np.ndarray:
+             lr: float = 0.03, decay: float = 0.005, band: float = 0.05, seed: int = 0, log=None,
+             policy=None, init=None) -> np.ndarray:
     """OpenAI-style ES on after-tax log growth over random `weeks`-long windows in [lo, hi].
     Antithetic pairs, rank-shaped fitness, the same windows for the whole population each
     iteration (common random numbers), weight decay toward the starting point."""
     rng = np.random.default_rng(seed)
     env = make_env("train", 1, lo, hi, weeks=weeks)
     L = layout(env)
-    theta0 = scorer_init(L)
+    policy = policy or p_scorer
+    theta0 = (init or scorer_init)(L)
     theta = theta0.copy()
     D = len(theta)
     m, v = np.zeros(D), np.zeros(D)
@@ -308,7 +351,7 @@ def train_es(lo, hi, iters: int = 150, pop: int = 48, windows: int = 24, weeks: 
         st = rng.integers(0, n_start, windows)
         params = np.repeat(P, windows, 0)
         starts = np.tile(st, pop)
-        r = rollout(env, p_scorer, params, starts, band)["log_growth"].reshape(pop, windows).mean(1)
+        r = rollout(env, policy, params, starts, band)["log_growth"].reshape(pop, windows).mean(1)
         rk = np.empty(pop)
         rk[np.argsort(r)] = np.arange(pop)
         f = rk / (pop - 1) - 0.5
@@ -462,13 +505,17 @@ def main():
 ES_VARIANTS = {
     "es_v1": dict(band=0.05, weeks=52, decay=0.005),
     "es_v2": dict(band=0.10, weeks=104, decay=0.02),
+    "es_tilt": dict(band=0.05, weeks=104, decay=0.02, policy="tilt"),
 }
+POLICIES = {"scorer": (p_scorer, scorer_init), "tilt": (p_tilt, tilt_init)}
 
 
 def train_variant(name: str, seeds=(0, 1, 2), iters: int = 150, log=print) -> dict:
     """Train an ES variant on every fold's fitting years; the policy for a fold is the
     average of the seeds' parameters (a linear scorer, so averaging is an ensemble of sorts)."""
-    kw = ES_VARIANTS[name]
+    kw = dict(ES_VARIANTS[name])
+    pol, init = POLICIES[kw.pop("policy", "scorer")]
+    kw.update(policy=pol, init=init)
     out = {}
     for flo, fhi, elo, ehi in folds():
         ths = []
@@ -487,7 +534,7 @@ def train_variant(name: str, seeds=(0, 1, 2), iters: int = 150, log=print) -> di
     return out
 
 
-def full_folds(variants=("es_v1", "es_v2"), log=print) -> pd.DataFrame:
+def full_folds(variants=("es_v1", "es_v2", "es_tilt"), log=print) -> pd.DataFrame:
     """Every policy on every fold year, scored in the full backtester."""
     rows = []
     th = {v: train_variant(v, log=log) for v in variants}
@@ -501,7 +548,8 @@ def full_folds(variants=("es_v1", "es_v2"), log=print) -> pd.DataFrame:
         best = _tune(p_predict_optimize, PO_GRID, flo, fhi, state_init={"fc": fc}, windows=12)
         res["predict_optimize"] = eval_full(p_predict_optimize, best["params"], "train", elo, ehi, best["band"], {"fc": fc})
         for v in variants:
-            res[v] = eval_full(p_scorer, th[v][y], "train", elo, ehi, ES_VARIANTS[v]["band"])
+            pol = POLICIES[ES_VARIANTS[v].get("policy", "scorer")][0]
+            res[v] = eval_full(pol, th[v][y], "train", elo, ehi, ES_VARIANTS[v]["band"])
         for k, r in res.items():
             rows.append({"fold": y, "policy": k, "log_growth": r["log_growth"], "max_dd": r.get("max_drawdown"),
                          "tax": r.get("taxes_paid"), "trades": r.get("trades")})
