@@ -486,11 +486,16 @@ def _tune(policy, grid, lo, hi, state_init=None, windows: int = 32, weeks: int =
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["folds", "full_folds"])
+    ap.add_argument("what", choices=["folds", "full_folds", "validate"])
     ap.add_argument("--iters", type=int, default=150)
     a = ap.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
+    if a.what == "validate":
+        df = validate()
+        cols = ["policy", "log_growth", "cagr", "max_drawdown", "ann_vol", "taxes_paid", "trades"]
+        print(df[[c for c in cols if c in df]].to_string(index=False, float_format=lambda v: f"{v:+.4f}"))
+        return
     if a.what == "full_folds":
         df = full_folds()
         print("\nmean over folds (full backtester):\n",
@@ -563,6 +568,38 @@ def full_folds(variants=("es_v1", "es_v2", "es_tilt", "es_tilt_b15"), log=print)
         log(pd.DataFrame([x for x in rows if x["fold"] == y]).to_string(index=False, float_format=lambda v: f"{v:+.4f}"))
     df = pd.DataFrame(rows)
     df.to_json(OUT / "full_folds.json", orient="records", indent=1)
+    return df
+
+
+
+def validate(variants=("es_tilt_b15", "es_v2"), seeds=(0, 1, 2), iters: int = 150, log=print) -> pd.DataFrame:
+    """Finalists trained on the whole training period, scored once on validation in the
+    full backtester (and the fast env, for reference). Each call is logged: every look
+    at validation spends some of its honesty."""
+    lo, hi = "2016-01-01", "2021-12-31"
+    rows = [{"policy": "equal_industries", **eval_full(p_equal, np.zeros(1), "validation")}]
+    for v in variants:
+        kw = dict(ES_VARIANTS[v])
+        pol, init = POLICIES[kw.pop("policy", "scorer")]
+        ths = []
+        for s in seeds:
+            f = OUT / f"{v}_all_seed{s}.npy"
+            if f.exists():
+                th = np.load(f)
+            else:
+                log(f"  {v} seed {s} on {lo[:4]}-{hi[:4]}")
+                th = train_es(lo, hi, iters=iters, seed=s, policy=pol, init=init, **kw)
+                np.save(f, th)
+            ths.append(th)
+            r = eval_full(pol, th, "validation", band=kw["band"])
+            rows.append({"policy": f"{v} seed {s}", **r})
+        th = np.mean(ths, 0)
+        np.save(OUT / f"{v}_all_mean.npy", th)
+        rows.append({"policy": f"{v} (seed mean)", **eval_full(pol, th, "validation", band=kw["band"])})
+    df = pd.DataFrame(rows)
+    with (OUT / "validation_looks.log").open("a") as fh:
+        fh.write(f"{pd.Timestamp.now(tz='UTC').isoformat()}\t{','.join(variants)}\n")
+    df.to_json(OUT / "validation.json", orient="records", indent=1)
     return df
 
 
